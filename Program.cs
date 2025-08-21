@@ -1,49 +1,27 @@
-using MySqlConnector;
+using Inmobiliaria.Data;
+using Inmobiliaria.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
+// DI
+builder.Services.AddScoped<IMySqlConnectionFactory, MySqlConnectionFactory>();
+builder.Services.AddScoped<IPersonaRepository, PersonaRepository>();
 
 var app = builder.Build();
 
-// 🔹 Probar conexión acá
-var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
-try
+if (app.Environment.IsDevelopment())
 {
-    using var conn = new MySqlConnection(connStr);
-    conn.Open();
-
-    var sql = "SELECT id, DNI, nombre, apellido, contacto FROM personas";
-    using var cmd = new MySqlCommand(sql, conn);
-    using var reader = cmd.ExecuteReader();
-
-    Console.WriteLine("===== Datos de Personas =====");
-    while (reader.Read())
-    {
-        Console.WriteLine(
-            $"ID: {reader.GetInt32("id")}, " +
-            $"DNI: {reader.GetString("DNI")}, " +
-            $"Nombre: {reader.GetString("nombre")}, " +
-            $"Apellido: {reader.GetString("apellido")}, " +
-            $"Contacto: {reader.GetString("contacto")}"
-        );
-    }
-    Console.WriteLine("=============================");
+    app.UseDeveloperExceptionPage();
 }
-catch (Exception ex)
-{
-    Console.WriteLine("❌ Error de conexión o consulta: " + ex.Message);
-}
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();   
 app.UseRouting();
 app.UseAuthorization();
 
@@ -51,7 +29,7 @@ app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Personas}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 app.Run();
