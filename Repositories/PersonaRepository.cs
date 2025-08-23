@@ -72,9 +72,9 @@ SELECT LAST_INSERT_ID();";
             await conn.OpenAsync(ct);
 
             const string sql = @"
-UPDATE personas 
-SET DNI=@DNI, nombre=@Nombre, apellido=@Apellido, contacto=@Contacto
-WHERE id=@Id";
+                                UPDATE personas 
+                                SET DNI=@DNI, nombre=@Nombre, apellido=@Apellido, contacto=@Contacto
+                                WHERE id=@Id";
 
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@Id", p.Id);
@@ -84,6 +84,9 @@ WHERE id=@Id";
             cmd.Parameters.AddWithValue("@Contacto", p.Contacto);
 
             var rows = await cmd.ExecuteNonQueryAsync(ct);
+            
+            Console.WriteLine($"Updated {rows} rows in personas table for Persona ID {p.Id}");
+
             return rows > 0;
         }
 

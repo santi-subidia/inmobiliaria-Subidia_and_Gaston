@@ -4,24 +4,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inmobiliaria.Controllers
 {
-    public class PersonasController : Controller
+    public class InquilinoController : Controller
     {
-        private readonly IPersonaRepository _repo;
-        public PersonasController(IPersonaRepository repo) => _repo = repo;
+        private readonly IInquilinoRepository _repo;
+        public InquilinoController(IInquilinoRepository repo) => _repo = repo;
 
         // LISTA
         public async Task<IActionResult> Index(CancellationToken ct)
         {
-            var personas = await _repo.GetAllAsync(ct);
-            return View(personas);
+            var inquilinos = await _repo.GetAllAsync(ct);
+            return View(inquilinos);
         }
 
         // DETALLES
         public async Task<IActionResult> Details(int id, CancellationToken ct)
         {
-            var p = await _repo.GetByIdAsync(id, ct);
-            if (p is null) return NotFound();
-            return View(p);
+            var i = await _repo.GetByIdAsync(id, ct);
+            if (i is null) return NotFound();
+            return View(i);
         }
 
         // CREATE
@@ -30,11 +30,11 @@ namespace Inmobiliaria.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Persona p, CancellationToken ct)
+        public async Task<IActionResult> Create(Inquilino i, CancellationToken ct)
         {
-            if (!ModelState.IsValid) return View(p);
-            await _repo.CreateAsync(p, ct);
-            TempData["Success"] = "Persona creada";
+            if (!ModelState.IsValid) return View(i);
+            await _repo.CreateAsync(i, ct);
+            TempData["Success"] = "Inquilino creado";
             return RedirectToAction(nameof(Index));
         }
 
@@ -42,22 +42,22 @@ namespace Inmobiliaria.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
-            var p = await _repo.GetByIdAsync(id, ct);
-            if (p is null) return NotFound();
-            return View(p);
+            var i = await _repo.GetByIdAsync(id, ct);
+            if (i is null) return NotFound();
+            return View(i);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Persona p, CancellationToken ct)
+        public async Task<IActionResult> Edit(Inquilino i, CancellationToken ct)
         {
-            if (id != p.Id) return BadRequest();
-            if (!ModelState.IsValid) return View(p);
+            Console.WriteLine("Edit POST called");
+            if (!ModelState.IsValid) return View(i);
 
-            var ok = await _repo.UpdateAsync(p, ct);
+            var ok = await _repo.UpdateAsync(i, ct);
             if (!ok) return NotFound();
 
-            TempData["Success"] = "Persona actualizada";
+            TempData["Success"] = "Inquilino actualizado";
             return RedirectToAction(nameof(Index));
         }
 
@@ -65,9 +65,9 @@ namespace Inmobiliaria.Controllers
         [HttpGet]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
-            var p = await _repo.GetByIdAsync(id, ct);
-            if (p is null) return NotFound();
-            return View(p);
+            var i = await _repo.GetByIdAsync(id, ct);
+            if (i is null) return NotFound();
+            return View(i);
         }
 
         [HttpPost, ActionName("Delete")]
