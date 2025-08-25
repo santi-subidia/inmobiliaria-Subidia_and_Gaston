@@ -7,15 +7,17 @@ namespace Inmobiliaria.Models
         public int Id { get; set; }
 
         [Required(ErrorMessage = "El DNI es obligatorio")]
-        [StringLength(20, ErrorMessage = "El DNI no puede superar los 20 caracteres")]
+        [RegularExpression(@"^\d{7,8}$", ErrorMessage = "El DNI debe tener 7 o 8 dígitos seguidos")]
         public string DNI { get; set; } = "";
 
         [Required(ErrorMessage = "El nombre es obligatorio")]
         [StringLength(50, ErrorMessage = "El nombre no puede superar los 50 caracteres")]
+        [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El nombre solo puede contener letras y espacios")]
         public string Nombre { get; set; } = "";
 
         [Required(ErrorMessage = "El apellido es obligatorio")]
         [StringLength(50, ErrorMessage = "El apellido no puede superar los 50 caracteres")]
+        [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El apellido solo puede contener letras y espacios")]
         public string Apellido { get; set; } = "";
 
         [Required(ErrorMessage = "El contacto es obligatorio")]
