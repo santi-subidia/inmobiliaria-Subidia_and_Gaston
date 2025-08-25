@@ -51,7 +51,6 @@ namespace Inmobiliaria.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Propietario p, CancellationToken ct)
         {
-            Console.WriteLine("Edit POST called");
             if (!ModelState.IsValid) return View(p);
 
             var ok = await _repo.UpdateAsync(p, ct);

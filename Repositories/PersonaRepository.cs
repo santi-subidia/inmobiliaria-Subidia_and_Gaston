@@ -46,15 +46,31 @@ namespace Inmobiliaria.Repositories
             return null;
         }
 
+        public async Task<Persona?> GetByDNIAsync(string dni, CancellationToken ct = default)
+        {
+            using var conn = _factory.CreateConnection();
+            await conn.OpenAsync(ct);
+
+            const string sql = @"SELECT id, DNI, nombre, apellido, contacto FROM personas WHERE DNI=@DNI LIMIT 1";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@DNI", dni);
+
+            using var reader = await cmd.ExecuteReaderAsync(ct);
+            if (await reader.ReadAsync(ct))
+                return MapPersona(reader);
+
+            return null;
+        }
+
         public async Task<int> CreateAsync(Persona p, CancellationToken ct = default)
         {
             using var conn = _factory.CreateConnection();
             await conn.OpenAsync(ct);
 
             const string sql = @"
-INSERT INTO personas (DNI, nombre, apellido, contacto)
-VALUES (@DNI, @Nombre, @Apellido, @Contacto);
-SELECT LAST_INSERT_ID();";
+            INSERT INTO personas (DNI, nombre, apellido, contacto)
+            VALUES (@DNI, @Nombre, @Apellido, @Contacto);
+            SELECT LAST_INSERT_ID();";
 
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@DNI", p.DNI);
@@ -62,8 +78,17 @@ SELECT LAST_INSERT_ID();";
             cmd.Parameters.AddWithValue("@Apellido", p.Apellido);
             cmd.Parameters.AddWithValue("@Contacto", p.Contacto);
 
-            var result = await cmd.ExecuteScalarAsync(ct);
-            return Convert.ToInt32(result);
+            try
+            {
+                var result = await cmd.ExecuteScalarAsync(ct);
+                return Convert.ToInt32(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error occurred while creating persona: {ex.Message}");
+                Console.WriteLine($"nombre de la excepcion: {ex.GetType().Name}");
+                return -1;
+            }
         }
 
         public async Task<bool> UpdateAsync(Persona p, CancellationToken ct = default)
@@ -84,8 +109,6 @@ SELECT LAST_INSERT_ID();";
             cmd.Parameters.AddWithValue("@Contacto", p.Contacto);
 
             var rows = await cmd.ExecuteNonQueryAsync(ct);
-            
-            Console.WriteLine($"Updated {rows} rows in personas table for Persona ID {p.Id}");
 
             return rows > 0;
         }
