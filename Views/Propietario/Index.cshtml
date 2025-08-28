@@ -1,28 +1,19 @@
 @model IEnumerable<Inmobiliaria.Models.Propietario>
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
 @{
     ViewData["Title"] = "Propietarios";
 }
+<h2>@ViewData["Title"]</h2>
 
-<div class="container mt-4 d-flex align-items-center gap-3">
-    <h2 class="mb-0">Propietarios</h2>
-    <a asp-action="Create" class="btn btn-primary ms-3">Crear nueva</a>
-</div>
+<p><a class="btn btn-primary" asp-action="Create">Nuevo propietario</a></p>
 
 <table class="table table-striped">
     <thead>
         <tr>
             <th>DNI</th>
-            <th>Nombre</th>
             <th>Apellido</th>
-            <th>Contacto</th>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Email</th>
             <th></th>
         </tr>
     </thead>
@@ -30,14 +21,15 @@
 @foreach (var p in Model)
 {
         <tr>
-            <td>@p.Persona?.DNI</td>
-            <td>@p.Persona?.Nombre</td>
-            <td>@p.Persona?.Apellido</td>
-            <td>@p.Persona?.Contacto</td>
+            <td>@p.Dni</td>
+            <td>@p.Apellido</td>
+            <td>@p.Nombre</td>
+            <td>@p.Telefono</td>
+            <td>@p.Email</td>
             <td class="text-end">
-                <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-info">Detalles</a>
-                <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-warning">Editar</a>
-                <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-danger">Eliminar</a>
+                <a asp-action="Details" asp-route-id="@p.Id">Ver</a> |
+                <a asp-action="Edit" asp-route-id="@p.Id">Editar</a> |
+                <a asp-action="Delete" asp-route-id="@p.Id">Eliminar</a>
             </td>
         </tr>
 }
