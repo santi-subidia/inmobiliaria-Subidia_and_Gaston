@@ -8,6 +8,7 @@ namespace Inmobiliaria.Repositories
     {
         Task<IEnumerable<Propietario>> GetAllAsync();
         Task<Propietario?> GetByIdAsync(long id);
+        Task<Propietario?> GetByDniAsync(string dni);
         Task<long> CreateAsync(Propietario propietario);
         Task<bool> UpdateAsync(Propietario propietario);
         Task<bool> DeleteAsync(long id); // soft delete con FechaEliminacion

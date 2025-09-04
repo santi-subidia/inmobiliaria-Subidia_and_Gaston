@@ -6,6 +6,7 @@ namespace Inmobiliaria.Repositories
 {
     public interface IInquilinoRepository : IBaseRepository<Inquilino>
     {
-        Task<(Inquilino?, Propietario?)> GetInquilinoAndPropietarioAsync(string dni);
+        Task<Inquilino?> GetByDniAsync(string dni);
+        Task<bool> UpdateFechaEliminacionAsync(long id);
     }
 }

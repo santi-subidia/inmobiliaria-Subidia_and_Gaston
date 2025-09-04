@@ -11,8 +11,12 @@
         <label for="dniVerificar" class="form-label">DNI</label>
         <input type="text" id="dniVerificar" name="dniVerificar" class="form-control" required />
         <div id="dniError" class="text-danger"></div>
+        <div id="dniMensaje" class="text-info"></div>
     </div>
     <button type="submit" class="btn btn-primary">Verificar</button>
+    <button onclick="window.history.back()" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver Atrás
+    </button>
 </form>
 
 <!-- Formulario de alta de inquilino -->
@@ -62,32 +66,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        async function verificarDni(event) {
-            event.preventDefault();
-            const dni = document.getElementById('dniVerificar').value.trim();
-            if (!dni) return false;
-
-            // Llamada real al backend
-            let existe = false;
-            try {
-                const response = await fetch(`/Inquilino/ExisteDni?dni=${encodeURIComponent(dni)}`);
-                existe = await response.json();
-            } catch (e) {
-                document.getElementById('dniError').innerText = 'Error al verificar el DNI.';
-                return false;
-            }
-            if (existe) {
-                document.getElementById('dniError').innerText = 'El inquilino ya existe.';
-                return false;
-            } else {
-                document.getElementById('dniError').innerText = '';
-                document.getElementById('altaForm').style.display = '';
-                document.getElementById('dniForm').style.display = 'none';
-                document.getElementById('Dni').value = dni;
-                document.getElementById('Dni').readOnly = true;
-            }
-            return false;
-        }
-    </script>
+    <script src="~/js/inquilino/Create.js"></script>
 }

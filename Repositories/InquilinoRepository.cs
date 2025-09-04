@@ -19,7 +19,7 @@ namespace Inmobiliaria.Repositories
             var list = new List<Inquilino>();
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-            String sql = "SELECT * FROM inquilinos";
+            String sql = "SELECT * FROM inquilinos WHERE fecha_eliminacion IS NULL";
             var cmd = new MySqlCommand(sql, conn);
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -33,9 +33,22 @@ namespace Inmobiliaria.Repositories
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-            String sql = "SELECT * FROM inquilinos WHERE id=@id";
+            String sql = "SELECT * FROM inquilinos WHERE id=@id AND fecha_eliminacion IS NULL";
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+                return MapInquilino(reader);
+            return null;
+        }
+
+        public async Task<Inquilino?> GetByDniAsync(string dni)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            String sql = "SELECT * FROM inquilinos WHERE dni=@dni";
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@dni", dni);
             using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
                 return MapInquilino(reader);
@@ -56,70 +69,98 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@telefono", i.Telefono ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@email", i.Email);
             cmd.Parameters.AddWithValue("@direccion", i.Direccion);
-            cmd.Parameters.AddWithValue("@created_at", i.CreatedAt);
-            cmd.Parameters.AddWithValue("@updated_at", i.UpdatedAt);
-            cmd.Parameters.AddWithValue("@fecha_eliminacion", i.FechaEliminacion ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@created_at", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("@fecha_eliminacion", (object)DBNull.Value);
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt64(result);
+        }
+
+        public async Task<bool> UpdateFechaEliminacionAsync(long id)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            String sql = "UPDATE inquilinos SET fecha_eliminacion = @fecha_eliminacion WHERE id=@id";
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@fecha_eliminacion", DBNull.Value);
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
         }
 
         public async Task<bool> UpdateAsync(Inquilino i)
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-            String sql = @"UPDATE inquilinos SET dni=@dni, apellido=@apellido, nombre=@nombre, telefono=@telefono, email=@email, direccion=@direccion, updated_at=@updated_at, fecha_eliminacion=@fecha_eliminacion WHERE id=@id";
-            var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@id", i.Id);
-            cmd.Parameters.AddWithValue("@dni", i.Dni);
-            cmd.Parameters.AddWithValue("@apellido", i.Apellido);
-            cmd.Parameters.AddWithValue("@nombre", i.Nombre);
-            cmd.Parameters.AddWithValue("@telefono", i.Telefono ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@email", i.Email);
-            cmd.Parameters.AddWithValue("@direccion", i.Direccion);
-            cmd.Parameters.AddWithValue("@updated_at", i.UpdatedAt);
-            cmd.Parameters.AddWithValue("@fecha_eliminacion", i.FechaEliminacion ?? (object)DBNull.Value);
-            var rows = await cmd.ExecuteNonQueryAsync();
-            return rows > 0;
+
+            using var transaction = await conn.BeginTransactionAsync();
+
+            try
+            {
+                var dniOriginal = await GetDniByIdAsync(i.Id, conn, transaction);
+
+                // Actualizar inquilinos
+                var sql = @"
+            UPDATE inquilinos 
+            SET dni=@dni, apellido=@apellido, nombre=@nombre, 
+                telefono=@telefono, email=@email, direccion=@direccion, 
+                updated_at=@updated_at
+            WHERE id=@id;
+            
+            UPDATE propietarios 
+            SET dni=@dni, apellido=@apellido, nombre=@nombre,
+                telefono=@telefono, email=@email, direccion=@direccion,
+                updated_at=@updated_at
+            WHERE dni=@dni_original AND EXISTS (SELECT 1 FROM propietarios WHERE dni=@dni_original)";
+
+                var cmd = new MySqlCommand(sql, conn, transaction);
+                cmd.Parameters.AddWithValue("@id", i.Id);
+                cmd.Parameters.AddWithValue("@dni", i.Dni);
+                cmd.Parameters.AddWithValue("@dni_original", dniOriginal);
+                cmd.Parameters.AddWithValue("@apellido", i.Apellido);
+                cmd.Parameters.AddWithValue("@nombre", i.Nombre);
+                cmd.Parameters.AddWithValue("@telefono", i.Telefono ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@email", i.Email);
+                cmd.Parameters.AddWithValue("@direccion", i.Direccion);
+                cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
+
+                var rows = await cmd.ExecuteNonQueryAsync();
+
+                await transaction.CommitAsync();
+
+                // Éxito si al menos se actualizó inquilinos (rows >= 1)
+                return rows >= 1;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        private async Task<string?> GetDniByIdAsync(int id, MySqlConnection conn, MySqlTransaction transaction)
+        {
+            var sql = "SELECT dni FROM inquilinos WHERE id = @id";
+            var cmd = new MySqlCommand(sql, conn, transaction);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var result = await cmd.ExecuteScalarAsync();
+            if (result == null || result == DBNull.Value || string.IsNullOrEmpty(result.ToString()))
+            {
+                throw new Exception($"No se encontró un inquilino con ID {id}");
+            }
+            return result.ToString();
         }
 
         public async Task<bool> DeleteAsync(long id)
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-            String sql = "DELETE FROM inquilinos WHERE id=@id";
+            String sql = "UPDATE inquilinos SET fecha_eliminacion = NOW() WHERE id=@id";
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
-        }
-
-        public async Task<(Inquilino?, Propietario?)> GetInquilinoAndPropietarioAsync(string dni)
-        {
-            Inquilino? inquilino = null;
-            Propietario? propietario = null;
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            string sql = @"SELECT i.*, p.id AS PropietarioId, p.DNI AS PropietarioDNI, p.Nombre AS PropietarioNombre, p.Apellido AS PropietarioApellido 
-                        FROM inquilinos i LEFT JOIN propietarios p ON i.DNI = p.DNI 
-                        WHERE i.DNI = @dni";
-            var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@dni", dni);
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                inquilino = MapInquilino(reader);
-                if (!reader.IsDBNull(reader.GetOrdinal("PropietarioId")))
-                {
-                    propietario = new Propietario
-                    {
-                        Id = reader.GetInt32("PropietarioId"),
-                        Dni = reader.GetString("PropietarioDNI"),
-                        Nombre = reader.GetString("PropietarioNombre"),
-                        Apellido = reader.GetString("PropietarioApellido")
-                    };
-                }
-            }
-            return (inquilino, propietario);
         }
 
         private static Inquilino MapInquilino(MySqlDataReader reader) => new()

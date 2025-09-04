@@ -8,10 +8,12 @@ namespace Inmobiliaria.Controllers
     public class InquilinoController : Controller
     {
         private readonly IInquilinoRepository _repo;
+        private readonly IPropietarioRepository _propietarioRepo;
 
-        public InquilinoController(IInquilinoRepository repo)
+        public InquilinoController(IInquilinoRepository repo, IPropietarioRepository propietarioRepo)
         {
             _repo = repo;
+            _propietarioRepo = propietarioRepo;
         }
 
         // GET: Inquilino
@@ -33,9 +35,29 @@ namespace Inmobiliaria.Controllers
         [HttpGet]
         public async Task<IActionResult> ExisteDni(string dni)
         {
-            if (string.IsNullOrWhiteSpace(dni)) return Json(false);
-            var (inquilino, _) = await _repo.GetInquilinoAndPropietarioAsync(dni);
-            return Json(inquilino != null);
+            if (string.IsNullOrWhiteSpace(dni)) return Json(null);
+            var inquilino = await _repo.GetByDniAsync(dni);
+            if (inquilino != null)
+            {
+                if (inquilino.FechaEliminacion == null)
+                    return Json(new { mensaje = "El inquilino ya existe." });
+                else
+                {
+                    if (await _repo.UpdateFechaEliminacionAsync(inquilino.Id))
+                    {
+                        inquilino.FechaEliminacion = null;
+                        return Json(new { mensaje = "El inquilino existía pero fue reactivado." });
+                    }
+                }
+            }
+            var propietario = await _propietarioRepo.GetByDniAsync(dni);
+            if (propietario != null)
+            {
+                var inquilinoFromPropietario = Inquilino.InquilinoFromPropietario(propietario);
+                var id = await _repo.CreateAsync(inquilinoFromPropietario);
+                return Json(new { mensaje = "El inquilino fue creado a partir del propietario." });
+            }
+            return Json(null);
         }
         
         // GET: Inquilino/Create

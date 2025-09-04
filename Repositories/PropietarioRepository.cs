@@ -30,6 +30,12 @@ namespace Inmobiliaria.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id && p.FechaEliminacion == null);
         }
 
+        public async Task<Propietario?> GetByDniAsync(string dni)
+        {
+            return await _context.Propietarios
+                .FirstOrDefaultAsync(p => p.Dni == dni);
+        }
+
         public async Task<long> CreateAsync(Propietario propietario)
         {
             _context.Propietarios.Add(propietario);
