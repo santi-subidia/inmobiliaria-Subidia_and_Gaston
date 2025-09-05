@@ -1,0 +1,76 @@
+@model Inmobiliaria.Models.Contrato
+@{
+    ViewData["Title"] = "Rescindir Contrato";
+}
+
+<h2>@ViewData["Title"]</h2>
+<h5 class="text-danger mb-4">¿Está seguro que desea rescindir este contrato?</h5>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Contrato ID</dt>
+            <dd class="col-sm-9">#@Model.Id</dd>
+
+            <dt class="col-sm-3">Inquilino</dt>
+            <dd class="col-sm-9">
+                @if (Model.Inquilino != null)
+                {
+                    <span>@Model.Inquilino.Nombre @Model.Inquilino.Apellido</span><br>
+                    <small class="text-muted">DNI: @Model.Inquilino.Dni</small>
+                }
+                else
+                {
+                    <span>ID: @Model.InquilinoId</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Inmueble</dt>
+            <dd class="col-sm-9">ID: @Model.InmuebleId</dd>
+
+            <dt class="col-sm-3">Periodo</dt>
+            <dd class="col-sm-9">
+                @Model.FechaInicio.ToString("dd/MM/yyyy") - @Model.FechaFinOriginal.ToString("dd/MM/yyyy")
+            </dd>
+
+            <dt class="col-sm-3">Monto Mensual</dt>
+            <dd class="col-sm-9">@Model.MontoMensual.ToString("C")</dd>
+
+            <dt class="col-sm-3">Estado Actual</dt>
+            <dd class="col-sm-9">
+                <span class="badge bg-success">@Model.Estado</span>
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<form method="post" asp-action="RescindirConfirmed" asp-route-id="@Model.Id">
+    @Html.AntiForgeryToken()
+    
+    <div class="mb-3">
+        <label for="fechaFinEfectiva" class="form-label">Fecha de Rescisión Efectiva (opcional)</label>
+        <input type="date" id="fechaFinEfectiva" name="fechaFinEfectiva" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+        <div class="form-text">
+            Si no se especifica, se usará la fecha actual. La fecha original era: @Model.FechaFinOriginal.ToString("dd/MM/yyyy")
+        </div>
+    </div>
+
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> 
+        <strong>Atención:</strong> La rescisión implica la terminación anticipada del contrato antes de su vencimiento natural.
+    </div>
+
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-circle"></i> 
+        <strong>Importante:</strong> Al rescindir el contrato, su estado cambiará a "RESCINDIDO" y no podrá ser modificado posteriormente.
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-x-circle"></i> Confirmar Rescisión
+        </button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+    </div>
+</form>

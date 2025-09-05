@@ -12,6 +12,7 @@ builder.Services.AddDbContext<InmobiliariaContext>(options =>
 builder.Services.AddScoped<IMySqlConnectionFactory, MySqlConnectionFactory>();
 builder.Services.AddScoped<IInquilinoRepository, InquilinoRepository>();
 builder.Services.AddScoped<IPropietarioRepository, PropietarioRepository>();
+builder.Services.AddScoped<IContratoRepository, ContratoRepository>();
 
 builder.Services.AddControllersWithViews();
 

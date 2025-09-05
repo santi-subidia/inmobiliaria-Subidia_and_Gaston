@@ -1,0 +1,129 @@
+@model Inmobiliaria.Models.Contrato
+@{
+    ViewData["Title"] = "Editar Contrato";
+}
+
+<h2>@ViewData["Title"] - #@Model.Id</h2>
+
+<form asp-action="Edit" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CreadoPor" />
+    <input type="hidden" asp-for="CreadoAt" />
+    <input type="hidden" asp-for="FinalizadoPor" />
+    <input type="hidden" asp-for="FinalizadoAt" />
+    
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="InquilinoId" class="form-label"></label>
+                <select asp-for="InquilinoId" class="form-select" asp-items="ViewBag.InquilinoId">
+                    <option value="">Seleccione un inquilino</option>
+                </select>
+                <span asp-validation-for="InquilinoId" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="InmuebleId" class="form-label"></label>
+                <input asp-for="InmuebleId" class="form-control" />
+                <span asp-validation-for="InmuebleId" class="text-danger"></span>
+                <small class="text-muted">ID del inmueble</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="FechaInicio" class="form-label"></label>
+                <input asp-for="FechaInicio" class="form-control" type="date" />
+                <span asp-validation-for="FechaInicio" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="FechaFinOriginal" class="form-label"></label>
+                <input asp-for="FechaFinOriginal" class="form-control" type="date" />
+                <span asp-validation-for="FechaFinOriginal" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="FechaFinEfectiva" class="form-label"></label>
+                <input asp-for="FechaFinEfectiva" class="form-control" type="date" />
+                <span asp-validation-for="FechaFinEfectiva" class="text-danger"></span>
+                <small class="text-muted">Opcional: Solo si difiere de la fecha original</small>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="MontoMensual" class="form-label"></label>
+                <input asp-for="MontoMensual" class="form-control" type="number" step="0.01" min="0" />
+                <span asp-validation-for="MontoMensual" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Estado" class="form-label"></label>
+                <select asp-for="Estado" class="form-select" asp-items="ViewBag.Estado">
+                </select>
+                <span asp-validation-for="Estado" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="RenovadoDeId" class="form-label"></label>
+                <input asp-for="RenovadoDeId" class="form-control" type="number" />
+                <span asp-validation-for="RenovadoDeId" class="text-danger"></span>
+                <small class="text-muted">Opcional: ID del contrato del cual se renueva</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i>
+        <strong>Nota:</strong> Los cambios en contratos vigentes deben ser realizados con precaución. 
+        Consider usar las opciones de "Finalizar" o "Rescindir" si es necesario terminar el contrato.
+    </div>
+
+    <div class="mb-4">
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Calcular duración automáticamente
+        function calcularDuracion() {
+            const fechaInicio = document.getElementById('FechaInicio').value;
+            const fechaFin = document.getElementById('FechaFinOriginal').value;
+            
+            if (fechaInicio && fechaFin) {
+                const inicio = new Date(fechaInicio);
+                const fin = new Date(fechaFin);
+                
+                if (fin > inicio) {
+                    const diferenciaMeses = (fin.getFullYear() - inicio.getFullYear()) * 12 + (fin.getMonth() - inicio.getMonth());
+                    console.log(`Duración del contrato: ${diferenciaMeses} meses`);
+                }
+            }
+        }
+
+        document.getElementById('FechaInicio').addEventListener('change', calcularDuracion);
+        document.getElementById('FechaFinOriginal').addEventListener('change', calcularDuracion);
+
+        // Mostrar duración inicial
+        calcularDuracion();
+    </script>
+}

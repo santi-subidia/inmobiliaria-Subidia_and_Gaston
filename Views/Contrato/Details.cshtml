@@ -1,0 +1,179 @@
+@model Inmobiliaria.Models.Contrato
+@{
+    ViewData["Title"] = "Detalle del Contrato";
+}
+
+<h2 class="mb-4">@ViewData["Title"] - #@Model.Id</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-text"></i> Información del Contrato
+                    <span class="badge @(Model.Estado == EstadoContrato.VIGENTE ? "bg-success" : 
+                                       Model.Estado == EstadoContrato.FINALIZADO ? "bg-secondary" : "bg-danger") ms-2">
+                        @Model.Estado.ToString()
+                    </span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">ID del Contrato</dt>
+                    <dd class="col-sm-8">#@Model.Id</dd>
+
+                    <dt class="col-sm-4">Inmueble</dt>
+                    <dd class="col-sm-8">ID: @Model.InmuebleId</dd>
+
+                    <dt class="col-sm-4">Inquilino</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Inquilino != null)
+                        {
+                            <strong>@Model.Inquilino.Nombre @Model.Inquilino.Apellido</strong><br>
+                            <small class="text-muted">DNI: @Model.Inquilino.Dni</small><br>
+                            <a asp-controller="Inquilino" asp-action="Details" asp-route-id="@Model.InquilinoId" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-person"></i> Ver Inquilino
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">ID: @Model.InquilinoId</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Fecha de Inicio</dt>
+                    <dd class="col-sm-8">@Model.FechaInicio.ToString("dd/MM/yyyy")</dd>
+
+                    <dt class="col-sm-4">Fecha de Fin Original</dt>
+                    <dd class="col-sm-8">@Model.FechaFinOriginal.ToString("dd/MM/yyyy")</dd>
+
+                    @if (Model.FechaFinEfectiva.HasValue)
+                    {
+                        <dt class="col-sm-4">Fecha de Fin Efectiva</dt>
+                        <dd class="col-sm-8">
+                            <span class="text-warning">@Model.FechaFinEfectiva.Value.ToString("dd/MM/yyyy")</span>
+                            @if (Model.FechaFinEfectiva != Model.FechaFinOriginal)
+                            {
+                                <small class="text-muted">(Modificada)</small>
+                            }
+                        </dd>
+                    }
+
+                    <dt class="col-sm-4">Monto Mensual</dt>
+                    <dd class="col-sm-8"><strong>@Model.MontoMensual.ToString("C")</strong></dd>
+
+                    <dt class="col-sm-4">Duración</dt>
+                    <dd class="col-sm-8">@Model.DuracionEnMeses meses</dd>
+
+                    <dt class="col-sm-4">Monto Total</dt>
+                    <dd class="col-sm-8"><strong>@Model.MontoTotal.ToString("C")</strong></dd>
+
+                    @if (Model.RenovadoDeId.HasValue)
+                    {
+                        <dt class="col-sm-4">Renovado de</dt>
+                        <dd class="col-sm-8">
+                            <a asp-action="Details" asp-route-id="@Model.RenovadoDeId" class="btn btn-sm btn-outline-info">
+                                Contrato #@Model.RenovadoDeId
+                            </a>
+                        </dd>
+                    }
+
+                    <dt class="col-sm-4">Estado del Contrato</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.EstaVigente)
+                        {
+                            <span class="badge bg-success">Vigente y Activo</span>
+                        }
+                        else if (Model.Estado == EstadoContrato.VIGENTE)
+                        {
+                            <span class="badge bg-warning">Vigente pero fuera de fechas</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@Model.Estado</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Información de Auditoría</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-6">Creado</dt>
+                    <dd class="col-sm-6">@Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-6">Creado por</dt>
+                    <dd class="col-sm-6">Usuario #@Model.CreadoPor</dd>
+
+                    @if (Model.FinalizadoAt.HasValue)
+                    {
+                        <dt class="col-sm-6">Finalizado</dt>
+                        <dd class="col-sm-6">@Model.FinalizadoAt.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-6">Finalizado por</dt>
+                        <dd class="col-sm-6">Usuario #@Model.FinalizadoPor</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Acciones disponibles -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Acciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    @if (Model.Estado == EstadoContrato.VIGENTE)
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
+                        <a asp-action="Finalizar" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="bi bi-check-circle"></i> Finalizar
+                        </a>
+                        <a asp-action="Rescindir" asp-route-id="@Model.Id" class="btn btn-danger">
+                            <i class="bi bi-x-circle"></i> Rescindir
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-secondary" disabled>
+                            <i class="bi bi-lock"></i> Contrato Finalizado
+                        </button>
+                    }
+                    
+                    <hr>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver a Lista
+                    </a>
+                    <a asp-action="PorInquilino" asp-route-inquilinoId="@Model.InquilinoId" class="btn btn-outline-info">
+                        <i class="bi bi-person-lines-fill"></i> Ver Contratos del Inquilino
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
