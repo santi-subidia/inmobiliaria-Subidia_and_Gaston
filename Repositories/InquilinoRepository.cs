@@ -109,7 +109,7 @@ namespace Inmobiliaria.Repositories
             
             UPDATE propietarios 
             SET dni=@dni, apellido=@apellido, nombre=@nombre,
-                telefono=@telefono, email=@email, direccion=@direccion,
+                telefono=@telefono, email=@email, direccion_contacto=@direccion,
                 updated_at=@updated_at
             WHERE dni=@dni_original AND EXISTS (SELECT 1 FROM propietarios WHERE dni=@dni_original)";
 
