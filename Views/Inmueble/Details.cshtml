@@ -1,0 +1,57 @@
+@model Inmobiliaria.Models.Inmueble
+@{
+    ViewData["Title"] = "Detalles del inmueble";
+
+    // Si el controller setea los diccionarios (igual que en Index), usamos nombres.
+    var propNombres = ViewBag.PropNombres as IDictionary<long, string>;
+    var tipoNombres = ViewBag.TipoNombres as IDictionary<long, string>;
+    string propTexto = Model.PropietarioId.ToString();
+    string tipoTexto = Model.TipoId.ToString();
+
+    if (propNombres != null && propNombres.TryGetValue(Convert.ToInt64(Model.PropietarioId), out var pn)) propTexto = pn;
+    if (tipoNombres != null && tipoNombres.TryGetValue(Convert.ToInt64(Model.TipoId), out var tn)) tipoTexto = tn;
+}
+<h2>@ViewData["Title"]</h2>
+
+<div class="card">
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-sm-3">Propietario</dt>
+      <dd class="col-sm-9">@propTexto</dd>
+
+      <dt class="col-sm-3">Tipo</dt>
+      <dd class="col-sm-9">@tipoTexto</dd>
+
+      <dt class="col-sm-3">Uso</dt>
+      <dd class="col-sm-9">@Model.Uso</dd>
+
+      <dt class="col-sm-3">Ambientes</dt>
+      <dd class="col-sm-9">@Model.Ambientes</dd>
+
+      <dt class="col-sm-3">Dirección</dt>
+      <dd class="col-sm-9">@Model.Direccion</dd>
+
+      <dt class="col-sm-3">Precio</dt>
+      <dd class="col-sm-9">@Model.PrecioSugerido.ToString("C0")</dd>
+
+      <dt class="col-sm-3">Coordenadas</dt>
+      <dd class="col-sm-9">
+        @(Model.CoordenadaLat?.ToString() ?? "-"), @(Model.CoordenadaLon?.ToString() ?? "-")
+      </dd>
+
+      <dt class="col-sm-3">Suspendido</dt>
+      <dd class="col-sm-9">
+        @(Model.Suspendido ? Html.Raw("<span class=\"badge bg-danger\">Sí</span>")
+                           : Html.Raw("<span class=\"badge bg-success\">No</span>"))
+      </dd>
+
+      <dt class="col-sm-3">Observaciones</dt>
+      <dd class="col-sm-9">@Model.Observaciones</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="mt-3">
+  <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
+  <a asp-action="Index" class="btn btn-secondary">Volver</a>
+</div>

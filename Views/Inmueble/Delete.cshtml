@@ -1,0 +1,18 @@
+@model Inmobiliaria.Models.Inmueble
+@{
+    ViewData["Title"] = "Eliminar inmueble";
+}
+<h2>@ViewData["Title"]</h2>
+
+<div class="alert alert-warning">
+  <h5>¿Estás seguro de eliminar (suspender) este inmueble?</h5>
+  <p class="mb-0"><strong>@Model.Direccion</strong></p>
+  <small>Id: @Model.Id · PropietarioId: @Model.PropietarioId · TipoId: @Model.TipoId</small>
+</div>
+
+<form asp-action="Delete" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

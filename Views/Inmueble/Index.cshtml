@@ -1,0 +1,60 @@
+@model IEnumerable<Inmobiliaria.Models.Inmueble>
+@{
+    ViewData["Title"] = "Inmuebles";
+    var propNombres = ViewBag.PropNombres as IDictionary<long, string>;  // 👈 long
+    var tipoNombres = ViewBag.TipoNombres as IDictionary<long, string>;  // 👈 long
+}
+<h2 class="mb-3">@ViewData["Title"]</h2>
+
+<p>
+  <a asp-action="Create" class="btn btn-success">+ Nuevo inmueble</a>
+  <a asp-action="Disponibles" class="btn btn-outline-primary ms-2">Ver disponibles</a>
+</p>
+
+<table class="table table-striped table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>Propietario</th>
+      <th>Tipo</th>
+      <th>Uso</th>
+      <th>Ambientes</th>
+      <th>Dirección</th>
+      <th class="text-end">Precio</th>
+      <th class="text-center">Suspendido</th>
+      <th class="text-end">Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+@foreach (var i in Model)
+{
+    var propKey = Convert.ToInt64(i.PropietarioId);   // 👈 convertir a long
+    var tipoKey = Convert.ToInt64(i.TipoId);          // 👈 convertir a long
+
+    var propTexto = (propNombres != null && propNombres.TryGetValue(propKey, out var pn))
+        ? pn : i.PropietarioId.ToString();
+
+    var tipoTexto = (tipoNombres != null && tipoNombres.TryGetValue(tipoKey, out var tn))
+        ? tn : i.TipoId.ToString();
+
+    <tr>
+      <td>@propTexto</td>
+      <td>@tipoTexto</td>
+      <td>@i.Uso</td>
+      <td>@i.Ambientes</td>
+      <td>@i.Direccion</td>
+      <td class="text-end">@i.PrecioSugerido.ToString("C0")</td>
+      <td class="text-center">
+        @(i.Suspendido ? Html.Raw("<span class=\"badge bg-danger\">Sí</span>")
+                       : Html.Raw("<span class=\"badge bg-success\">No</span>"))
+      </td>
+      <td class="text-end">
+        <div class="btn-group" role="group">
+          <a asp-action="Details" asp-route-id="@i.Id" class="btn btn-outline-secondary btn-sm">Ver</a>
+          <a asp-action="Edit" asp-route-id="@i.Id" class="btn btn-outline-primary btn-sm">Editar</a>
+          <a asp-action="Delete" asp-route-id="@i.Id" class="btn btn-outline-danger btn-sm">Eliminar</a>
+        </div>
+      </td>
+    </tr>
+}
+  </tbody>
+</table>

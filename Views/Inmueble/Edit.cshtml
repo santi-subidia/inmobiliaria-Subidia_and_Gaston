@@ -1,0 +1,84 @@
+@model Inmobiliaria.Models.Inmueble
+@{
+    ViewData["Title"] = "Editar inmueble";
+}
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Edit" method="post" autocomplete="off">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="PropietarioId" class="form-label">Propietario</label>
+            <select asp-for="PropietarioId" class="form-select" asp-items="ViewBag.PropietarioId"></select>
+            <span asp-validation-for="PropietarioId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="TipoId" class="form-label">Tipo de inmueble</label>
+            <select asp-for="TipoId" class="form-select" asp-items="ViewBag.TipoId"></select>
+            <span asp-validation-for="TipoId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="Uso" class="form-label">Uso</label>
+            <select asp-for="Uso" class="form-select" asp-items="ViewBag.Usos"></select>
+            <span asp-validation-for="Uso" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="Ambientes" class="form-label"></label>
+            <input asp-for="Ambientes" class="form-control" />
+            <span asp-validation-for="Ambientes" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="PrecioSugerido" class="form-label">Precio sugerido (ARS)</label>
+           <input asp-for="PrecioSugerido" class="form-control"
+                value="@Model.PrecioSugerido.ToString("0")" />
+            <span asp-validation-for="PrecioSugerido" class="text-danger"></span>
+        </div>
+
+        <div class="col-12">
+            <label asp-for="Direccion" class="form-label"></label>
+            <input asp-for="Direccion" class="form-control" />
+            <span asp-validation-for="Direccion" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="CoordenadaLat" class="form-label">Latitud</label>
+            <input asp-for="CoordenadaLat" class="form-control" />
+            <span asp-validation-for="CoordenadaLat" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="CoordenadaLon" class="form-label">Longitud</label>
+            <input asp-for="CoordenadaLon" class="form-control" />
+            <span asp-validation-for="CoordenadaLon" class="text-danger"></span>
+        </div>
+
+        <div class="col-12">
+            <label asp-for="Observaciones" class="form-label"></label>
+            <textarea asp-for="Observaciones" class="form-control" rows="2"></textarea>
+            <span asp-validation-for="Observaciones" class="text-danger"></span>
+        </div>
+
+        <div class="col-12 form-check mt-2">
+            <input class="form-check-input" asp-for="Suspendido" />
+            <label class="form-check-label" asp-for="Suspendido">Suspender publicación</label>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+}
+
