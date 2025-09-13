@@ -23,26 +23,26 @@ namespace Inmobiliaria.Controllers
 
         // GET: Inmueble
         public async Task<IActionResult> Index()
-{
-    var inmuebles = await _repo.GetAllAsync();
+        {
+            var inmuebles = await _repo.GetAllWithFiltersAsync();
 
-    // Propietarios: clave long para evitar mismatch
-    var propietarios = await _propietarioRepo.GetAllAsync();
-    var mapProp = propietarios.ToDictionary(
-        p => (long)p.Id,                                  // 👈 clave long
-        p => $"{p.Apellido}, {p.Nombre}");
+            // Propietarios: clave long para evitar mismatch
+            var propietarios = await _propietarioRepo.GetAllAsync();
+            var mapProp = propietarios.ToDictionary(
+                p => (long)p.Id,                                  // 👈 clave long
+                p => $"{p.Apellido}, {p.Nombre}");
 
-    // Tipos: también long por coherencia (aunque funcione con int)
-    var tipos = await _tipoRepo.GetAllAsync();
-    var mapTipo = tipos.ToDictionary(
-        t => (long)t.Id,                                  // 👈 clave long
-        t => t.Nombre ?? $"Tipo {t.Id}");
+            // Tipos: también long por coherencia (aunque funcione con int)
+            var tipos = await _tipoRepo.GetAllAsync();
+            var mapTipo = tipos.ToDictionary(
+                t => (long)t.Id,                                  // 👈 clave long
+                t => t.Nombre ?? $"Tipo {t.Id}");
 
-    ViewBag.PropNombres = mapProp;
-    ViewBag.TipoNombres = mapTipo;
+            ViewBag.PropNombres = mapProp;
+            ViewBag.TipoNombres = mapTipo;
 
-    return View(inmuebles);
-}
+            return View(inmuebles);
+        }
 
 
         // GET: Inmueble/Create
@@ -106,7 +106,7 @@ namespace Inmobiliaria.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            await _repo.DeleteAsync(id); // internamente hace suspendido=1
+            await _repo.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
 
@@ -127,6 +127,16 @@ namespace Inmobiliaria.Controllers
             return View("Index", lista);
         }
 
+        // GET: Inmueble/Details/5
+        public async Task<IActionResult> Details(long id)
+        {
+            var inmueble = await _repo.GetByIdAsync(id);
+            if (inmueble == null) return NotFound();
+            inmueble.Propietario = await _propietarioRepo.GetByIdAsync(inmueble.PropietarioId);
+            inmueble.Tipo = await _tipoRepo.GetByIdAsync(inmueble.TipoId);
+            return View(inmueble);
+        }
+
         // ================= Helpers =================
         private async Task LoadCombosAsync(long? selectedPropietarioId = null, int? selectedTipoId = null)
         {
@@ -134,7 +144,7 @@ namespace Inmobiliaria.Controllers
             ViewBag.PropietarioId = new SelectList(
                 propietarios,
                 "Id",
-                "Apellido", // o una propiedad compuesta con Nombre+Apellido si la tenés
+                "NombreCompleto", // o una propiedad compuesta con Nombre+Apellido si la tenés
                 selectedPropietarioId);
 
             var tipos = await _tipoRepo.GetAllAsync();

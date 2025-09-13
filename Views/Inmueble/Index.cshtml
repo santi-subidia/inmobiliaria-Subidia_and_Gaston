@@ -27,8 +27,8 @@
   <tbody>
 @foreach (var i in Model)
 {
-    var propKey = Convert.ToInt64(i.PropietarioId);   // 👈 convertir a long
-    var tipoKey = Convert.ToInt64(i.TipoId);          // 👈 convertir a long
+    var propKey = Convert.ToInt64(i.PropietarioId);
+    var tipoKey = Convert.ToInt64(i.TipoId);
 
     var propTexto = (propNombres != null && propNombres.TryGetValue(propKey, out var pn))
         ? pn : i.PropietarioId.ToString();

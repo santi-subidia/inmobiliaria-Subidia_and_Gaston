@@ -2,14 +2,8 @@
 @{
     ViewData["Title"] = "Detalles del inmueble";
 
-    // Si el controller setea los diccionarios (igual que en Index), usamos nombres.
-    var propNombres = ViewBag.PropNombres as IDictionary<long, string>;
-    var tipoNombres = ViewBag.TipoNombres as IDictionary<long, string>;
-    string propTexto = Model.PropietarioId.ToString();
-    string tipoTexto = Model.TipoId.ToString();
-
-    if (propNombres != null && propNombres.TryGetValue(Convert.ToInt64(Model.PropietarioId), out var pn)) propTexto = pn;
-    if (tipoNombres != null && tipoNombres.TryGetValue(Convert.ToInt64(Model.TipoId), out var tn)) tipoTexto = tn;
+    ViewData["PropietarioNombre"] = Model.Propietario?.NombreCompleto ?? "Desconocido";
+    ViewData["TipoNombre"] = Model.Tipo?.Nombre ?? $"Tipo {Model.TipoId}";
 }
 <h2>@ViewData["Title"]</h2>
 
@@ -17,10 +11,10 @@
   <div class="card-body">
     <dl class="row">
       <dt class="col-sm-3">Propietario</dt>
-      <dd class="col-sm-9">@propTexto</dd>
+      <dd class="col-sm-9">@ViewData["PropietarioNombre"]</dd>
 
       <dt class="col-sm-3">Tipo</dt>
-      <dd class="col-sm-9">@tipoTexto</dd>
+      <dd class="col-sm-9">@ViewData["TipoNombre"]</dd>
 
       <dt class="col-sm-3">Uso</dt>
       <dd class="col-sm-9">@Model.Uso</dd>

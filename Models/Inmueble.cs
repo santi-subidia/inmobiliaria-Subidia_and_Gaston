@@ -69,5 +69,8 @@ namespace Inmobiliaria.Models
         [Display(Name = "Última Actualización")]
         [DataType(DataType.DateTime)]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        public Propietario? Propietario { get; set; }
+        public TipoInmueble? Tipo { get; set; }
     }
 }

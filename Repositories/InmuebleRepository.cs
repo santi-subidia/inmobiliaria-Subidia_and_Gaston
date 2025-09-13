@@ -24,8 +24,25 @@ namespace Inmobiliaria.Repositories
             var list = new List<Inmueble>();
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
+            string sql = @"SELECT * FROM inmuebles";
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
 
-            const string sql = @"SELECT * FROM inmuebles";
+            while (await reader.ReadAsync())
+                list.Add(MapInmueble(reader));
+
+            return list;
+        }
+        public async Task<IEnumerable<Inmueble>> GetAllWithFiltersAsync(bool fecha_eliminacion = false)
+        {
+            var list = new List<Inmueble>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            string sql = @"SELECT * FROM inmuebles";
+            if (fecha_eliminacion)
+            {
+                sql += " WHERE fecha_eliminacion IS NULL";
+            }
             using var cmd = new MySqlCommand(sql, conn);
             using var reader = await cmd.ExecuteReaderAsync();
 
@@ -166,7 +183,20 @@ WHERE id = @id;";
         /// </summary>
         public async Task<bool> DeleteAsync(long id)
         {
-            return await UpdateSuspendidoAsync(id, true);
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"UPDATE inmuebles 
+                                 SET fecha_eliminacion=@fecha_eliminacion, updated_at=@updated_at 
+                                 WHERE id=@id";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@fecha_eliminacion", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+            
         }
 
         public async Task<bool> UpdateSuspendidoAsync(long id, bool suspendido)
