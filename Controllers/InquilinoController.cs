@@ -17,10 +17,19 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Inquilino
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
-            var inquilinos = await _repo.GetAllAsync();
-            return View(inquilinos);
+            var (items, total) = await _repo.GetPagedAsync(page, pageSize);
+
+            var model = new PagedResult<Inquilino>
+            {
+                Items = items,
+                TotalCount = total,
+                PageSize = pageSize,
+                CurrentPage = page
+            };
+
+            return View(model);
         }
 
         // GET: Inquilino/Details/5
@@ -59,7 +68,7 @@ namespace Inmobiliaria.Controllers
             }
             return Json(null);
         }
-        
+
         // GET: Inquilino/Create
         public IActionResult Create()
         {

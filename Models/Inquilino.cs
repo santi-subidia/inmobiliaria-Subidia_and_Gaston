@@ -66,6 +66,8 @@ namespace Inmobiliaria.Models
         [DataType(DataType.DateTime)]
         public DateTime? FechaEliminacion { get; set; }
 
+        public string NombreCompleto => $"{Nombre} {Apellido}";
+
         public static Inquilino InquilinoFromPropietario(Propietario propietario)
         {
             return new Inquilino

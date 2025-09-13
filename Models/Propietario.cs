@@ -27,6 +27,9 @@ namespace Inmobiliaria.Models
         [Column("nombre")]
         public string Nombre { get; set; } = string.Empty;
 
+        [NotMapped]
+        public string NombreCompleto => $"{Nombre} {Apellido}";
+
         [MaxLength(50)]
         [Column("telefono")]
         public string? Telefono { get; set; }

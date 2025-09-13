@@ -55,6 +55,46 @@ namespace Inmobiliaria.Repositories
             return null;
         }
 
+        public async Task<(IEnumerable<Inquilino> Items, int TotalCount)> GetPagedAsync(int page, int pageSize)
+        {
+            var list = new List<Inquilino>();
+
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            // OFFSET = (page-1)*pageSize
+            string sql = @"
+        SELECT SQL_CALC_FOUND_ROWS *
+        FROM inquilinos
+        WHERE fecha_eliminacion IS NULL
+        ORDER BY id
+        LIMIT @pageSize OFFSET @offset;
+        SELECT FOUND_ROWS();";  // devuelve el total ignorando el LIMIT
+
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@pageSize", pageSize);
+            cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            // --- 1° resultado: la página de datos ---
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapInquilino(reader));
+            }
+
+            // --- 2° resultado: total de registros ---
+            await reader.NextResultAsync(); // pasamos al 2do SELECT
+            int total = 0;
+            if (await reader.ReadAsync())
+            {
+                total = reader.GetInt32(0);
+            }
+
+            return (list, total);
+        }
+
+
         public async Task<long> CreateAsync(Inquilino i)
         {
             using var conn = _connectionFactory.CreateConnection();
