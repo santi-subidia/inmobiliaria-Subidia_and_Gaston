@@ -1,0 +1,92 @@
+@model PagedResult<Inmobiliaria.Models.Pago>
+@using Inmobiliaria.Models
+@{
+    ViewData["Title"] = "Pagos";
+    var contratoId = ViewBag.ContratoId as int?;
+}
+
+<h2 class="mb-3">@ViewData["Title"]</h2>
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <label class="form-label">Contrato</label>
+        <select name="contratoId" class="form-select">
+            <option value="">-- Todos --</option>
+            @if (ViewBag.ContratosIndex is IEnumerable<SelectListItem> contratosIndex)
+            {
+                foreach (var c in contratosIndex)
+                {
+                    <option value="@c.Value" selected="@(contratoId.HasValue && c.Value == contratoId.Value.ToString())">@c.Text</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-auto align-self-end">
+        <button class="btn btn-primary">Filtrar</button>
+        <a asp-action="Index" class="btn btn-secondary">Limpiar</a>
+    </div>
+    <div class="col-auto ms-auto align-self-end">
+        <a asp-action="Create" class="btn btn-success">Nuevo Pago</a>
+    </div>
+</form>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Contrato</th>
+            <th>N° Pago</th>
+            <th>Fecha</th>
+            <th>Concepto</th>
+            <th class="text-end">Importe</th>
+            <th>Estado</th>
+            <th style="width: 180px;"></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var p in Model.Items)
+    {
+        <tr class="@(p.EstaAnulado ? "table-danger" : "")">
+            <td>@p.Id</td>
+            <td>@p.ContratoId</td>
+            <td>@p.NumeroPago</td>
+            <td>@p.FechaPago.ToString("dd/MM/yyyy")</td>
+            <td>@p.Concepto</td>
+            <td class="text-end">@p.Importe.ToString("C")</td>
+            <td>@p.Estado</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">Ver</a>
+                <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Editar</a>
+                <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger">Anular</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@{
+    // Paginación simple
+    var totalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize);
+    if (totalPages < 1) totalPages = 1;
+}
+<nav aria-label="Paginación">
+    <ul class="pagination">
+        <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+            <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-pageSize="@Model.PageSize" asp-route-contratoId="@contratoId">Anterior</a>
+        </li>
+        @for (int i = 1; i <= totalPages; i++)
+        {
+            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-pageSize="@Model.PageSize" asp-route-contratoId="@contratoId">@i</a>
+            </li>
+        }
+        <li class="page-item @(Model.CurrentPage >= totalPages ? "disabled" : "")">
+            <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-pageSize="@Model.PageSize" asp-route-contratoId="@contratoId">Siguiente</a>
+        </li>
+    </ul>
+</nav>

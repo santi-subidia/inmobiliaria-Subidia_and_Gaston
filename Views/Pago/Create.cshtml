@@ -1,0 +1,62 @@
+@model Inmobiliaria.Models.Pago
+@{
+    ViewData["Title"] = "Registrar Pago";
+}
+
+<h2 class="mb-3">@ViewData["Title"]</h2>
+
+<form asp-action="Create" method="post" class="card card-body">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label asp-for="ContratoId" class="form-label"></label>
+            <select asp-for="ContratoId" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Contratos">
+                <option value="">-- Seleccionar contrato --</option>
+            </select>
+            <span asp-validation-for="ContratoId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="NumeroPago" class="form-label"></label>
+            <input asp-for="NumeroPago" class="form-control" />
+            <span asp-validation-for="NumeroPago" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="FechaPago" class="form-label"></label>
+            <input asp-for="FechaPago" class="form-control" type="date" />
+            <span asp-validation-for="FechaPago" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Concepto" class="form-label"></label>
+            <input asp-for="Concepto" class="form-control" />
+            <span asp-validation-for="Concepto" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="Importe" class="form-label"></label>
+            <input asp-for="Importe" class="form-control" />
+            <span asp-validation-for="Importe" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="Estado" class="form-label"></label>
+            <select asp-for="Estado" class="form-select">
+                <option>Pendiente</option>
+                <option>Pagado</option>
+                <option>Anulado</option>
+            </select>
+            <span asp-validation-for="Estado" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
