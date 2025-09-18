@@ -1,68 +1,208 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
 using Inmobiliaria.Data;
 using Inmobiliaria.Models;
-using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 
 namespace Inmobiliaria.Repositories
 {
     public class PropietarioRepository : IPropietarioRepository
     {
-        private readonly InmobiliariaContext _context;
+        private readonly IMySqlConnectionFactory _connectionFactory;
 
-        public PropietarioRepository(InmobiliariaContext context)
+        public PropietarioRepository(IMySqlConnectionFactory connectionFactory)
         {
-            _context = context;
+            _connectionFactory = connectionFactory;
         }
 
+        // =========================
+        // Lecturas
+        // =========================
         public async Task<IEnumerable<Propietario>> GetAllAsync()
         {
-            return await _context.Propietarios
-                .Where(p => p.FechaEliminacion == null) // solo activos
-                .ToListAsync();
+            // Solo activos (sin fecha_eliminacion)
+            var list = new List<Propietario>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"SELECT * FROM propietarios WHERE fecha_eliminacion IS NULL ORDER BY apellido, nombre";
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+                list.Add(Map(reader));
+
+            return list;
+        }
+
+        public async Task<IEnumerable<Propietario>> GetAllWithFiltersAsync(bool activos)
+        {
+            var list = new List<Propietario>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            var sql = activos
+                ? @"SELECT * FROM propietarios WHERE fecha_eliminacion IS NULL ORDER BY apellido, nombre"
+                : @"SELECT * FROM propietarios ORDER BY apellido, nombre";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+                list.Add(Map(reader));
+
+            return list;
         }
 
         public async Task<Propietario?> GetByIdAsync(long id)
         {
-            return await _context.Propietarios
-                .FirstOrDefaultAsync(p => p.Id == id && p.FechaEliminacion == null);
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"SELECT * FROM propietarios WHERE id=@id";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+                return Map(reader);
+
+            return null;
         }
 
         public async Task<Propietario?> GetByDniAsync(string dni)
         {
-            return await _context.Propietarios
-                .FirstOrDefaultAsync(p => p.Dni == dni);
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"SELECT * FROM propietarios WHERE dni=@dni LIMIT 1";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@dni", dni);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+                return Map(reader);
+
+            return null;
         }
 
-        public async Task<long> CreateAsync(Propietario propietario)
+        // =========================
+        // Escrituras
+        // =========================
+        public async Task<long> CreateAsync(Propietario p)
         {
-            _context.Propietarios.Add(propietario);
-            await _context.SaveChangesAsync();
-            return propietario.Id;
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"
+INSERT INTO propietarios
+(dni, apellido, nombre, telefono, email, direccion_contacto, created_at, updated_at, fecha_eliminacion)
+VALUES
+(@dni, @apellido, @nombre, @telefono, @email, @direccion_contacto, @created_at, @updated_at, @fecha_eliminacion);
+SELECT LAST_INSERT_ID();";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@dni", p.Dni);
+            cmd.Parameters.AddWithValue("@apellido", p.Apellido);
+            cmd.Parameters.AddWithValue("@nombre", p.Nombre);
+            cmd.Parameters.AddWithValue("@telefono", (object?)p.Telefono ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@email", (object?)p.Email ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@direccion_contacto", (object?)p.DireccionContacto ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@created_at", p.CreatedAt == default ? DateTime.UtcNow : p.CreatedAt);
+            cmd.Parameters.AddWithValue("@updated_at", p.UpdatedAt == default ? DateTime.UtcNow : p.UpdatedAt);
+            cmd.Parameters.AddWithValue("@fecha_eliminacion", (object?)p.FechaEliminacion ?? DBNull.Value);
+
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt64(result);
         }
 
-        public async Task<bool> UpdateAsync(Propietario propietario)
+        public async Task<bool> UpdateAsync(Propietario p)
         {
-            var existing = await _context.Propietarios.FindAsync(propietario.Id);
-            if (existing == null || existing.FechaEliminacion != null)
-                return false;
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
 
-            _context.Entry(existing).CurrentValues.SetValues(propietario);
-            await _context.SaveChangesAsync();
-            return true;
+            const string sql = @"
+UPDATE propietarios SET
+  dni                = @dni,
+  apellido           = @apellido,
+  nombre             = @nombre,
+  telefono           = @telefono,
+  email              = @email,
+  direccion_contacto = @direccion_contacto,
+  updated_at         = @updated_at
+WHERE id = @id;";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", p.Id);
+            cmd.Parameters.AddWithValue("@dni", p.Dni);
+            cmd.Parameters.AddWithValue("@apellido", p.Apellido);
+            cmd.Parameters.AddWithValue("@nombre", p.Nombre);
+            cmd.Parameters.AddWithValue("@telefono", (object?)p.Telefono ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@email", (object?)p.Email ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@direccion_contacto", (object?)p.DireccionContacto ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
         }
 
+        /// <summary>
+        /// Soft delete: setea fecha_eliminacion = NOW()
+        /// </summary>
         public async Task<bool> DeleteAsync(long id)
         {
-            var propietario = await _context.Propietarios.FindAsync(id);
-            if (propietario == null || propietario.FechaEliminacion != null)
-                return false;
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
 
-            propietario.FechaEliminacion = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return true;
+            const string sql = @"UPDATE propietarios 
+                                 SET fecha_eliminacion=@fecha, updated_at=@updated 
+                                 WHERE id=@id";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@fecha", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
         }
+
+        /// <summary>
+        /// Alias por compatibilidad con otros controladores (marca eliminado)
+        /// </summary>
+        public Task<bool> UpdateFechaEliminacionAsync(long id) => DeleteAsync(id);
+
+        /// <summary>
+        /// Restaura un propietario eliminado (fecha_eliminacion = NULL)
+        /// </summary>
+        public async Task<bool> RestoreAsync(long id)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"UPDATE propietarios 
+                                 SET fecha_eliminacion=NULL, updated_at=@updated 
+                                 WHERE id=@id";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+        }
+
+        // =========================
+        // Mapeo
+        // =========================
+        private static Propietario Map(MySqlDataReader r) => new()
+        {
+            Id                = r.GetInt64("id"),
+            Dni               = r.GetString("dni"),
+            Apellido          = r.GetString("apellido"),
+            Nombre            = r.GetString("nombre"),
+            Telefono          = r.IsDBNull(r.GetOrdinal("telefono")) ? null : r.GetString("telefono"),
+            Email             = r.IsDBNull(r.GetOrdinal("email")) ? null : r.GetString("email"),
+            DireccionContacto = r.IsDBNull(r.GetOrdinal("direccion_contacto")) ? null : r.GetString("direccion_contacto"),
+            CreatedAt         = r.GetDateTime("created_at"),
+            UpdatedAt         = r.GetDateTime("updated_at"),
+            FechaEliminacion  = r.IsDBNull(r.GetOrdinal("fecha_eliminacion")) ? null : r.GetDateTime("fecha_eliminacion")
+        };
     }
 }
