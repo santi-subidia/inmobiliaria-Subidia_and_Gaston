@@ -1,0 +1,180 @@
+@model IEnumerable<Inmobiliaria.Models.Imagen>
+@{
+    ViewData["Title"] = "Galería de Imágenes";
+    var inmuebleId = ViewBag.InmuebleId;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>@ViewData["Title"] - Inmueble #@inmuebleId</h2>
+        <a asp-controller="Inmueble" asp-action="Details" asp-route-id="@inmuebleId" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver al Inmueble
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Formularios para subir imágenes -->
+    <div class="row mb-4">
+        <!-- Sección de Portada -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-star"></i> Imagen de Portada</h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Portada_CreateOrDelete" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="InmuebleId" value="@inmuebleId" />
+                        <div class="mb-3">
+                            <input type="file" name="Archivo" class="form-control" accept="image/*" required />
+                            <small class="form-text text-muted">
+                                Esta será la imagen principal del inmueble.
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-star"></i> Establecer como Portada
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Galería -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-images"></i> Galería de Imágenes</h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="SubirImagen" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inmuebleId" value="@inmuebleId" />
+                        <div class="mb-3">
+                            <input type="file" name="archivos" multiple class="form-control" accept="image/*" required />
+                            <small class="form-text text-muted">
+                                Máximo 5 imágenes en la galería. Formatos: JPG, PNG, GIF, WEBP (max 10MB).
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="fas fa-upload"></i> Agregar a Galería
+                        </button>
+                    </form>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <strong>Imágenes en galería:</strong> @Model.Count() / 5
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Galería de imágenes -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-th"></i> Imágenes de la Galería (@Model.Count())</h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="row">
+                    @foreach (var imagen in Model)
+                    {
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                            <div class="card h-100">
+                                <img src="@imagen.Url" class="card-img-top" alt="Imagen del inmueble" 
+                                     style="height: 200px; object-fit: cover; cursor: pointer;"
+                                     onclick="mostrarImagenCompleta('@imagen.Url')" />
+                                <div class="card-footer">
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-warning btn-sm" 
+                                                onclick="establecerPortada(@imagen.Id, @inmuebleId)">
+                                            <i class="fas fa-star"></i> Usar como Portada
+                                        </button>
+                                        <form asp-action="EliminarImagen" method="post" class="d-inline" 
+                                              onsubmit="return confirm('¿Está seguro de eliminar esta imagen?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@imagen.Id" />
+                                            <input type="hidden" name="inmuebleId" value="@inmuebleId" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                <i class="fas fa-trash"></i> Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Galería vacía</h6>
+                    <p class="mb-0">Este inmueble no tiene imágenes en la galería. Use el formulario de arriba para agregar imágenes.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal para mostrar imagen completa -->
+<div class="modal fade" id="modalImagen" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Imagen del Inmueble</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="imagenCompleta" src="" class="img-fluid" alt="Imagen completa" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function mostrarImagenCompleta(url) {
+            document.getElementById('imagenCompleta').src = url;
+            new bootstrap.Modal(document.getElementById('modalImagen')).show();
+        }
+
+        async function establecerPortada(imagenId, inmuebleId) {
+            try {
+                const response = await fetch('/Imagen/EstablecerPortada', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: `imagenId=${imagenId}&inmuebleId=${inmuebleId}`
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Portada actualizada correctamente');
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error al establecer la portada: ' + error.message);
+            }
+        }
+    </script>
+}

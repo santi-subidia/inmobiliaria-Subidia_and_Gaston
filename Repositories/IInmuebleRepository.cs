@@ -8,10 +8,9 @@ namespace Inmobiliaria.Repositories
     {
         Task<IEnumerable<Inmueble>> GetAllWithFiltersAsync(bool fecha_eliminacion = false, bool suspendido = false, bool disponible = false);
         Task<IEnumerable<Inmueble>> GetByPropietarioAsync(long propietarioId);
-        Task<IEnumerable<Inmueble>> GetDisponiblesAsync();
         Task<bool> UpdateSuspendidoAsync(long id, bool suspendido);
         Task<bool> UpdateFechaEliminacionAsync(long id);
         Task<IEnumerable<Inmueble>> GetAllbyFechasAsync(DateOnly fechaInicio, DateOnly fechaFin);
-
+        Task<bool> UpdatePortadaAsync(long id, string? portadaUrl);
     }
 }

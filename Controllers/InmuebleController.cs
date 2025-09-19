@@ -10,15 +10,21 @@ namespace Inmobiliaria.Controllers
         private readonly IInmuebleRepository _repo;
         private readonly IPropietarioRepository _propietarioRepo;
         private readonly ITipoInmuebleRepository _tipoRepo; // asumido
+        private readonly IImagenRepository _imagenRepo;
+        private readonly IWebHostEnvironment _env;
 
         public InmuebleController(
             IInmuebleRepository repo,
             IPropietarioRepository propietarioRepo,
-            ITipoInmuebleRepository tipoRepo) // si no lo tenés, lo quitamos y seteamos TipoId manual
+            ITipoInmuebleRepository tipoRepo, // si no lo tenés, lo quitamos y seteamos TipoId manual
+            IImagenRepository imagenRepo,
+            IWebHostEnvironment env)
         {
             _repo = repo;
             _propietarioRepo = propietarioRepo;
             _tipoRepo = tipoRepo;
+            _imagenRepo = imagenRepo;
+            _env = env;
         }
 
         // GET: Inmueble
@@ -29,13 +35,13 @@ namespace Inmobiliaria.Controllers
             // Propietarios: clave long para evitar mismatch
             var propietarios = await _propietarioRepo.GetAllAsync();
             var mapProp = propietarios.ToDictionary(
-                p => (long)p.Id,                                  // 👈 clave long
+                p => (long)p.Id,                                 
                 p => $"{p.Apellido}, {p.Nombre}");
 
             // Tipos: también long por coherencia (aunque funcione con int)
             var tipos = await _tipoRepo.GetAllAsync();
             var mapTipo = tipos.ToDictionary(
-                t => (long)t.Id,                                  // 👈 clave long
+                t => (long)t.Id,                                 
                 t => t.Nombre ?? $"Tipo {t.Id}");
 
             ViewBag.PropNombres = mapProp;
@@ -59,9 +65,21 @@ namespace Inmobiliaria.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _repo.CreateAsync(inmueble);
-                return RedirectToAction(nameof(Index));
+                var inmuebleId = await _repo.CreateAsync(inmueble);
+                if (inmuebleId <= 0)
+                {
+                    ModelState.AddModelError("", "No se pudo crear el inmueble. Intente nuevamente.");
+                    await LoadCombosAsync(inmueble.PropietarioId, inmueble.TipoId);
+                    return View(inmueble);
+                }else
+                {
+                    TempData["Success"] = "Inmueble creado exitosamente.";
+                    await LoadCombosAsync();
+                    return RedirectToAction(nameof(Index));
+                }
             }
+
+            TempData["Error"] = "Error al crear el inmueble.";
             await LoadCombosAsync();
             return View(inmueble);
         }
@@ -132,8 +150,14 @@ namespace Inmobiliaria.Controllers
         {
             var inmueble = await _repo.GetByIdAsync(id);
             if (inmueble == null) return NotFound();
+            
             inmueble.Propietario = await _propietarioRepo.GetByIdAsync(inmueble.PropietarioId);
             inmueble.Tipo = await _tipoRepo.GetByIdAsync(inmueble.TipoId);
+            
+            // Cargar imágenes del inmueble
+            var imagenes = await _imagenRepo.GetByInmuebleIdAsync((int)id);
+            ViewBag.Imagenes = imagenes;
+            
             return View(inmueble);
         }
 

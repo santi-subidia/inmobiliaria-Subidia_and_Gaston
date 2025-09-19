@@ -59,6 +59,12 @@ namespace Inmobiliaria.Models
         [Display(Name = "Observaciones")]
         [StringLength(255, ErrorMessage = "Las observaciones no pueden exceder los 255 caracteres")]
         public string? Observaciones { get; set; }
+        [Display(Name = "Portada")]
+        public String? Portada_Url { get; set; }
+
+        public IFormFile? Portada_Archivo { get; set; }
+
+        public List<Imagen>? Imagenes { get; set; }
 
         [Required]
         [Display(Name = "Fecha de Creación")]

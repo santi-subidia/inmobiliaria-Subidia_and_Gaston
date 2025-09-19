@@ -125,25 +125,6 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        /// <summary>
-        /// Disponibles = no suspendidos. (La disponibilidad por fechas se valida contra Contratos en otra consulta.)
-        /// </summary>
-        public async Task<IEnumerable<Inmueble>> GetDisponiblesAsync()
-        {
-            var list = new List<Inmueble>();
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-
-            const string sql = @"SELECT * FROM inmuebles WHERE suspendido = 0";
-            using var cmd = new MySqlCommand(sql, conn);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-                list.Add(MapInmueble(reader));
-
-            return list;
-        }
-
         // =========================
         // Escrituras
         // =========================
@@ -155,10 +136,10 @@ namespace Inmobiliaria.Repositories
             const string sql = @"
 INSERT INTO inmuebles
 (propietario_id, tipo_id, uso, ambientes, direccion, coordenada_lat, coordenada_lon, 
- precio_sugerido, suspendido, observaciones, created_at, updated_at)
+ precio_sugerido, suspendido, observaciones, portada_url, created_at, updated_at)
 VALUES
 (@propietario_id, @tipo_id, @uso, @ambientes, @direccion, @coordenada_lat, @coordenada_lon,
- @precio_sugerido, @suspendido, @observaciones, @created_at, @updated_at);
+ @precio_sugerido, @suspendido, @observaciones, @portada_url, @created_at, @updated_at);
 SELECT LAST_INSERT_ID();";
 
             using var cmd = new MySqlCommand(sql, conn);
@@ -172,6 +153,7 @@ SELECT LAST_INSERT_ID();";
             cmd.Parameters.AddWithValue("@precio_sugerido", i.PrecioSugerido);
             cmd.Parameters.AddWithValue("@suspendido", i.Suspendido ? 1 : 0);
             cmd.Parameters.AddWithValue("@observaciones", (object?)i.Observaciones ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@portada_url", (object?)i.Portada_Url ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@created_at", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
 
@@ -196,6 +178,7 @@ UPDATE inmuebles SET
   precio_sugerido= @precio_sugerido,
   suspendido     = @suspendido,
   observaciones  = @observaciones,
+  portada_url    = @portada_url,
   updated_at     = @updated_at
 WHERE id = @id;";
 
@@ -211,6 +194,7 @@ WHERE id = @id;";
             cmd.Parameters.AddWithValue("@precio_sugerido", i.PrecioSugerido);
             cmd.Parameters.AddWithValue("@suspendido", i.Suspendido ? 1 : 0);
             cmd.Parameters.AddWithValue("@observaciones", (object?)i.Observaciones ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@portada_url", (object?)i.Portada_Url ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
 
             var rows = await cmd.ExecuteNonQueryAsync();
@@ -255,6 +239,23 @@ WHERE id = @id;";
             return rows > 0;
         }
 
+        public async Task<bool> UpdatePortadaAsync(long id, string? portadaUrl)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"UPDATE inmuebles 
+                                 SET portada_url=@portada_url, updated_at=@updated_at 
+                                 WHERE id=@id";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@portada_url", (object?)portadaUrl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+        }
+
         /// <summary>
         /// Compatibilidad con la interfaz: como la tabla no tiene fecha_eliminacion,
         /// mapeamos este método a “suspender” el inmueble.
@@ -280,6 +281,7 @@ WHERE id = @id;";
             PrecioSugerido = r.GetDecimal("precio_sugerido"),
             Suspendido = r.GetBoolean("suspendido"),
             Observaciones = r.IsDBNull(r.GetOrdinal("observaciones")) ? null : r.GetString("observaciones"),
+            Portada_Url = r.IsDBNull(r.GetOrdinal("portada_url")) ? null : r.GetString("portada_url"),
             CreatedAt = r.GetDateTime("created_at"),
             UpdatedAt = r.GetDateTime("updated_at")
         };
