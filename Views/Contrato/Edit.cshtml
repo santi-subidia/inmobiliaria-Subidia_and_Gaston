@@ -5,49 +5,66 @@
 
 <h2>@ViewData["Title"] - #@Model.Id</h2>
 
-<form asp-action="Edit" method="post">
+<form id="fechasForm" autocomplete="off" onsubmit="return verificarFechas(event)">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="fechaInicio" class="form-label">Fecha de Inicio</label>
+            <input type="date" id="fechaInicio" name="fechaInicio" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" class="form-control" required />
+            <div id="fechaError" class="text-danger"></div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="fechaFin" class="form-label">Fecha de Fin</label>
+            <input type="date" id="fechaFin" name="fechaFin" value="@Model.FechaFinOriginal.ToString("yyyy-MM-dd")" class="form-control" required />
+            <div id="fechaFinError" class="text-danger"></div>
+        </div>
+        <div id="fechaMensaje" class="text-info"></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Verificar disponibilidad de inmuebles</button>
+    <a asp-action="Index" class="btn btn-secondary">Volver</a>
+</form>
+
+
+<form id="formEdit" asp-action="Edit" method="post" style="display:none;"">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="CreadoPor" />
     <input type="hidden" asp-for="CreadoAt" />
     <input type="hidden" asp-for="FinalizadoPor" />
     <input type="hidden" asp-for="FinalizadoAt" />
-    
+
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="mb-3">
-                <label asp-for="InquilinoId" class="form-label"></label>
-                <select asp-for="InquilinoId" class="form-select" asp-items="ViewBag.InquilinoId">
-                    <option value="">Seleccione un inquilino</option>
-                </select>
-                <span asp-validation-for="InquilinoId" class="text-danger"></span>
-            </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="FechaInicio" class="form-label">Fecha de Inicio</label>
+            <input id="fechaInicio2" type="date" asp-for="FechaInicio" class="form-control" readonly />
         </div>
-        <div class="col-md-6">
-            <div class="mb-3">
-                <label asp-for="InmuebleId" class="form-label"></label>
-                <input asp-for="InmuebleId" class="form-control" />
-                <span asp-validation-for="InmuebleId" class="text-danger"></span>
-                <small class="text-muted">ID del inmueble</small>
-            </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="FechaFinOriginal" class="form-label">Fecha de Fin</label>
+            <input id="fechaFin2" type="date" asp-for="FechaFinOriginal" class="form-control" readonly />
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-6">
             <div class="mb-3">
-                <label asp-for="FechaInicio" class="form-label"></label>
-                <input asp-for="FechaInicio" class="form-control" type="date" />
-                <span asp-validation-for="FechaInicio" class="text-danger"></span>
+                <label asp-for="InquilinoId" class="form-label"></label>
+                <input type="text" id="buscarInquilino" class="form-control" placeholder="Escriba nombre..." value="@Model.Inquilino?.NombreCompleto" />
+                <input type="hidden" name="InquilinoId" id="InquilinoId" value="@Model.InquilinoId" />
+                <div id="sugerencias" class="list-group position-absolute w-50"></div>
+                <span asp-validation-for="InquilinoId" class="text-danger"></span>
             </div>
         </div>
         <div class="col-md-6">
             <div class="mb-3">
-                <label asp-for="FechaFinOriginal" class="form-label"></label>
-                <input asp-for="FechaFinOriginal" class="form-control" type="date" />
-                <span asp-validation-for="FechaFinOriginal" class="text-danger"></span>
+                <label asp-for="InmuebleId" class="form-label">Inmueble</label>
+                @* <select asp-for="InmuebleId" class="form-select" asp-items="ViewBag.InmuebleId">
+                    <option value="">Seleccione un inmueble</option>
+                </select> *@
+                <select asp-for="InmuebleId" class="form-select">
+                    <option value="">Seleccione un inmueble</option>
+                </select>
+                <span asp-validation-for="InmuebleId" class="text-danger"></span>
             </div>
         </div>
     </div>
@@ -79,19 +96,11 @@
                 <span asp-validation-for="Estado" class="text-danger"></span>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="mb-3">
-                <label asp-for="RenovadoDeId" class="form-label"></label>
-                <input asp-for="RenovadoDeId" class="form-control" type="number" />
-                <span asp-validation-for="RenovadoDeId" class="text-danger"></span>
-                <small class="text-muted">Opcional: ID del contrato del cual se renueva</small>
-            </div>
-        </div>
     </div>
 
     <div class="alert alert-info" role="alert">
         <i class="bi bi-info-circle"></i>
-        <strong>Nota:</strong> Los cambios en contratos vigentes deben ser realizados con precaución. 
+        <strong>Nota:</strong> Los cambios en contratos vigentes deben ser realizados con precaución.
         Consider usar las opciones de "Finalizar" o "Rescindir" si es necesario terminar el contrato.
     </div>
 
@@ -104,26 +113,113 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // Calcular duración automáticamente
-        function calcularDuracion() {
-            const fechaInicio = document.getElementById('FechaInicio').value;
-            const fechaFin = document.getElementById('FechaFinOriginal').value;
-            
-            if (fechaInicio && fechaFin) {
-                const inicio = new Date(fechaInicio);
-                const fin = new Date(fechaFin);
-                
-                if (fin > inicio) {
-                    const diferenciaMeses = (fin.getFullYear() - inicio.getFullYear()) * 12 + (fin.getMonth() - inicio.getMonth());
-                    console.log(`Duración del contrato: ${diferenciaMeses} meses`);
+        const input = document.getElementById("buscarInquilino");
+        const hidden = document.getElementById("InquilinoId");
+        const sugerencias = document.getElementById("sugerencias");
+        let timeout;
+
+        input.addEventListener("input", () => {
+            clearTimeout(timeout);
+            const term = input.value.trim();
+
+            // Si tiene menos de 2 caracteres, limpio la lista
+            if (term.length < 2) {
+                sugerencias.innerHTML = "";
+                hidden.value = "";
+                return;
+            }
+
+            // Debounce para no disparar fetch por cada tecla
+            timeout = setTimeout(() => {
+                fetch(`/Inquilino/SearchByName?name=${encodeURIComponent(term)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        sugerencias.innerHTML = "";
+                        data.forEach(item => {
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.className = "list-group-item list-group-item-action";
+                            a.textContent = item.nombreCompleto; // Asumiendo que el backend envía nombreCompleto
+
+                            a.addEventListener("click", e => {
+                                e.preventDefault();
+                                input.value = item.nombreCompleto;   // muestra el nombre elegido
+                                hidden.value = item.id;      // guarda el id para el POST
+                                sugerencias.innerHTML = "";  // cierra las sugerencias
+                            });
+
+                            sugerencias.appendChild(a);
+                        });
+                    })
+                    .catch(err => console.error("Error buscando inquilinos:", err));
+            }, 300);
+        });
+
+        async function verificarFechas(event) {
+            event.preventDefault();
+
+            const fechaInicioInput = document.getElementById('fechaInicio');
+            const fechaFinInput = document.getElementById('fechaFin');
+            const fechaErrorDiv = document.getElementById('fechaError');
+            const fechaFinErrorDiv = document.getElementById('fechaFinError');
+            const fechaMensajeDiv = document.getElementById('fechaMensaje');
+
+            const fechaInicio = new Date(fechaInicioInput.value);
+            const fechaFin = new Date(fechaFinInput.value);
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
+            // Limpiar mensajes previos
+            fechaErrorDiv.innerText = '';
+            fechaFinErrorDiv.innerText = '';
+            fechaMensajeDiv.innerText = '';
+
+            let valid = true;
+
+            if (isNaN(fechaInicio.getTime())) {
+                fechaErrorDiv.innerText = 'Fecha de inicio inválida.';
+                valid = false;
+            } else if (fechaInicio < hoy) {
+                fechaErrorDiv.innerText = 'La fecha de inicio no puede ser en el pasado.';
+                valid = false;
+            }
+
+            if (isNaN(fechaFin.getTime())) {
+                fechaFinErrorDiv.innerText = 'Fecha de fin inválida.';
+                valid = false;
+            } else if (fechaFin <= fechaInicio) {
+                fechaFinErrorDiv.innerText = 'La fecha de fin debe ser posterior a la fecha de inicio.';
+                valid = false;
+            }
+
+            if (valid) {
+                const response = await fetch('/Contrato/VerificarInmueblesDisponibles?fechaInicio=' + encodeURIComponent(fechaInicioInput.value) + '&fechaFin=' + encodeURIComponent(fechaFinInput.value));
+                const inmueblesDisponibles = await response.json();
+                const selecInmueble = document.getElementById('InmuebleId');
+                document.getElementById('fechaInicio2').value = fechaInicioInput.value;
+                document.getElementById('fechaFin2').value = fechaFinInput.value;
+
+                if(fechaInicioInput.value == '@Model.FechaInicio.ToString("yyyy-MM-dd")' && fechaFinInput.value == '@Model.FechaFinOriginal.ToString("yyyy-MM-dd")') {   
+                        selecInmueble.innerHTML = `<option value="@Model.Inmueble.Id" selected>@Model.Inmueble.Direccion</option>`;
+                }else{
+                    selecInmueble.innerHTML = '<option value="">Seleccione un inmueble</option>';
+                }
+
+                if (inmueblesDisponibles.inmuebles.count === 0) {
+                    fechaMensajeDiv.innerText = 'No hay inmuebles disponibles en las fechas seleccionadas.';
+                } else {
+                    inmueblesDisponibles.inmuebles.forEach(inmueble => {
+                        const option = document.createElement('option');
+                        option.value = inmueble.id;
+                        option.text = inmueble.direccion;
+                        selecInmueble.appendChild(option);
+                    });
+                    document.getElementById('formEdit').style.display = '';
+                    document.getElementById('fechasForm').style.display = 'none';
                 }
             }
+
+            return false;
         }
-
-        document.getElementById('FechaInicio').addEventListener('change', calcularDuracion);
-        document.getElementById('FechaFinOriginal').addEventListener('change', calcularDuracion);
-
-        // Mostrar duración inicial
-        calcularDuracion();
     </script>
 }

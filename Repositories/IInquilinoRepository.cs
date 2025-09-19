@@ -9,5 +9,6 @@ namespace Inmobiliaria.Repositories
         Task<(IEnumerable<Inquilino> Items, int TotalCount)> GetPagedAsync(int page, int pageSize);
         Task<Inquilino?> GetByDniAsync(string dni);
         Task<bool> UpdateFechaEliminacionAsync(long id);
+        Task<IEnumerable<Inquilino>> SearchByNameAsync(string name);
     }
 }

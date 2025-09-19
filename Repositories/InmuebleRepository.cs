@@ -33,19 +33,58 @@ namespace Inmobiliaria.Repositories
 
             return list;
         }
-        public async Task<IEnumerable<Inmueble>> GetAllWithFiltersAsync(bool fecha_eliminacion = false)
+        public async Task<IEnumerable<Inmueble>> GetAllWithFiltersAsync(bool fecha_eliminacion = false, bool suspendido = false, bool disponible = false)
         {
             var list = new List<Inmueble>();
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-            string sql = @"SELECT * FROM inmuebles";
-            if (fecha_eliminacion)
+            string sql = "SELECT * FROM inmuebles";
+            if (disponible)
             {
-                sql += " WHERE fecha_eliminacion IS NULL";
+                sql += " LEFT JOIN contratos ON inmuebles.id = contratos.inmueble_id";
             }
+
+            sql += " WHERE 1=1";
+            if (fecha_eliminacion)
+                sql += " AND fecha_eliminacion IS NULL";
+            if (suspendido)
+                sql += " AND suspendido = 1";
+            if (disponible)
+                sql += " AND (contratos.finalizado_at IS NOT NULL OR contratos.id IS NULL)";
+
             using var cmd = new MySqlCommand(sql, conn);
             using var reader = await cmd.ExecuteReaderAsync();
 
+            while (await reader.ReadAsync())
+                list.Add(MapInmueble(reader));
+
+            return list;
+        }
+
+        public async Task<IEnumerable<Inmueble>> GetAllbyFechasAsync(DateOnly fechaInicio, DateOnly fechaFin)
+        {
+            var list = new List<Inmueble>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"SELECT *
+                                FROM inmuebles i
+                                WHERE
+                                    i.fecha_eliminacion IS NULL
+                                    AND i.suspendido = 0
+                                    AND i.id NOT IN (
+                                        SELECT c.inmueble_id
+                                        FROM contratos c
+                                        WHERE c.estado = 'VIGENTE'
+                                        AND c.fecha_inicio <= @fechaFin
+                                        AND c.fecha_fin_original >= @fechaInicio
+                                    );
+                                    ";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@fechaInicio", fechaInicio);
+            cmd.Parameters.AddWithValue("@fechaFin", fechaFin);
+
+            using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
                 list.Add(MapInmueble(reader));
 
@@ -196,7 +235,7 @@ WHERE id = @id;";
 
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
-            
+
         }
 
         public async Task<bool> UpdateSuspendidoAsync(long id, bool suspendido)
@@ -230,19 +269,19 @@ WHERE id = @id;";
         // =========================
         private static Inmueble MapInmueble(MySqlDataReader r) => new()
         {
-            Id             = r.GetInt32("id"),
-            PropietarioId  = r.GetInt32("propietario_id"),
-            TipoId         = r.GetInt32("tipo_id"),
-            Uso            = r.GetString("uso"),
-            Ambientes      = r.GetInt32("ambientes"),
-            Direccion      = r.GetString("direccion"),
-            CoordenadaLat  = r.IsDBNull(r.GetOrdinal("coordenada_lat")) ? null : r.GetDouble("coordenada_lat"),
-            CoordenadaLon  = r.IsDBNull(r.GetOrdinal("coordenada_lon")) ? null : r.GetDouble("coordenada_lon"),
+            Id = r.GetInt32("id"),
+            PropietarioId = r.GetInt32("propietario_id"),
+            TipoId = r.GetInt32("tipo_id"),
+            Uso = r.GetString("uso"),
+            Ambientes = r.GetInt32("ambientes"),
+            Direccion = r.GetString("direccion"),
+            CoordenadaLat = r.IsDBNull(r.GetOrdinal("coordenada_lat")) ? null : r.GetDouble("coordenada_lat"),
+            CoordenadaLon = r.IsDBNull(r.GetOrdinal("coordenada_lon")) ? null : r.GetDouble("coordenada_lon"),
             PrecioSugerido = r.GetDecimal("precio_sugerido"),
-            Suspendido     = r.GetBoolean("suspendido"),
-            Observaciones  = r.IsDBNull(r.GetOrdinal("observaciones")) ? null : r.GetString("observaciones"),
-            CreatedAt      = r.GetDateTime("created_at"),
-            UpdatedAt      = r.GetDateTime("updated_at")
+            Suspendido = r.GetBoolean("suspendido"),
+            Observaciones = r.IsDBNull(r.GetOrdinal("observaciones")) ? null : r.GetString("observaciones"),
+            CreatedAt = r.GetDateTime("created_at"),
+            UpdatedAt = r.GetDateTime("updated_at")
         };
     }
 

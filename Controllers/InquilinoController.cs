@@ -32,6 +32,24 @@ namespace Inmobiliaria.Controllers
             return View(model);
         }
 
+        public async Task<IActionResult> SearchByName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return Json(Array.Empty<object>());
+            }
+
+            var results = await _repo.SearchByNameAsync(name);
+
+            var lista = results.Select(i => new
+            {
+                i.Id,
+                i.NombreCompleto
+            });
+
+            return Json(lista);
+        }
+
         // GET: Inquilino/Details/5
         public async Task<IActionResult> Details(long id)
         {

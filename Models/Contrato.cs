@@ -44,9 +44,9 @@ namespace Inmobiliaria.Models
         [Display(Name = "Renovado de ID")]
         public long? RenovadoDeId { get; set; }
 
-        [Required(ErrorMessage = "El creador es obligatorio")]
+        //[Required(ErrorMessage = "El creador es obligatorio")]
         [Display(Name = "Creado por")]
-        public long CreadoPor { get; set; }
+        public long? CreadoPor { get; set; }
 
         [Required]
         [Display(Name = "Fecha de Creación")]
@@ -61,7 +61,7 @@ namespace Inmobiliaria.Models
         public DateTime? FinalizadoAt { get; set; }
 
         public Inquilino? Inquilino { get; set; }
-        //public Inmueble? Inmueble { get; set; }
+        public Inmueble? Inmueble { get; set; }
         //public Usuario? Creador { get; set; }
         //public Usuario? Finalizador { get; set; }
 

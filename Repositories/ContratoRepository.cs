@@ -182,9 +182,9 @@ namespace Inmobiliaria.Repositories
             
             string sql = @"
                 INSERT INTO contratos (inmueble_id, inquilino_id, fecha_inicio, fecha_fin_original, 
-                    fecha_fin_efectiva, monto_mensual, estado, renovado_de_id, creado_por, creado_at)
+                    fecha_fin_efectiva, monto_mensual, estado, renovado_de_id, creado_por, creado_at, finalizado_por, finalizado_at)
                 VALUES (@inmueble_id, @inquilino_id, @fecha_inicio, @fecha_fin_original, 
-                    @fecha_fin_efectiva, @monto_mensual, @estado, @renovado_de_id, @creado_por, @creado_at);
+                    @fecha_fin_efectiva, @monto_mensual, @estado, @renovado_de_id, @creado_por, @creado_at, @finalizado_por, @finalizado_at);
                 SELECT LAST_INSERT_ID();";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -196,9 +196,11 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
             cmd.Parameters.AddWithValue("@estado", contrato.Estado.ToString());
             cmd.Parameters.AddWithValue("@renovado_de_id", contrato.RenovadoDeId ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor);
+            cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor ?? 1);
             cmd.Parameters.AddWithValue("@creado_at", DateTime.UtcNow);
-            
+            cmd.Parameters.AddWithValue("@finalizado_por", contrato.FinalizadoPor ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@finalizado_at", contrato.FinalizadoAt ?? (object)DBNull.Value);
+
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt64(result);
         }
@@ -255,7 +257,7 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@id", id);
             cmd.Parameters.AddWithValue("@finalizado_por", finalizadoPor);
             cmd.Parameters.AddWithValue("@finalizado_at", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"));
             
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -278,7 +280,7 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@id", id);
             cmd.Parameters.AddWithValue("@finalizado_por", finalizadoPor);
             cmd.Parameters.AddWithValue("@finalizado_at", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"));
             
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -329,7 +331,7 @@ namespace Inmobiliaria.Repositories
                 MontoMensual = reader.GetDecimal("monto_mensual"),
                 Estado = Enum.Parse<EstadoContrato>(reader.GetString("estado")),
                 RenovadoDeId = reader.IsDBNull(reader.GetOrdinal("renovado_de_id")) ? null : reader.GetUInt32("renovado_de_id"),
-                CreadoPor = reader.GetInt64("creado_por"),
+                CreadoPor = reader.IsDBNull(reader.GetOrdinal("creado_por")) ? null : reader.GetInt64("creado_por"),
                 CreadoAt = reader.GetDateTime("creado_at"),
                 FinalizadoPor = reader.IsDBNull(reader.GetOrdinal("finalizado_por")) ? null : reader.GetInt64("finalizado_por"),
                 FinalizadoAt = reader.IsDBNull(reader.GetOrdinal("finalizado_at")) ? null : reader.GetDateTime("finalizado_at")

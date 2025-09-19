@@ -5,47 +5,65 @@
 
 <h2>@ViewData["Title"]</h2>
 
-<form asp-action="Create" method="post">
+
+<form id="fechasForm" autocomplete="off" onsubmit="return verificarFechas(event)">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="fechaInicio" class="form-label">Fecha de Inicio</label>
+            <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" required />
+            <div id="fechaError" class="text-danger"></div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="cantidadMeses" class="form-label">Cantidad de Meses</label>
+            <input type="number" id="cantidadMeses" name="cantidadMeses" class="form-control" required />
+            <div id="cantidadMesesError" class="text-danger"></div>
+        </div>
+        <div id="fechaMensaje" class="text-info"></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Verificar</button>
+    <a asp-action="Index" class="btn btn-secondary">Volver</a>
+</form>
+
+<form id="formCrear" asp-action="Create" method="post" style="display:none;">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="FechaInicio" class="form-label">Fecha de Inicio</label>
+            <input id="fechaInicio2" type="date" asp-for="FechaInicio" class="form-control" readonly />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="FechaFinOriginal" class="form-label">Fecha de Fin</label>
+            <input id="fechaFin2" type="date" asp-for="FechaFinOriginal" class="form-control" readonly />
+        </div>
+    </div>
+
+    <div class="row">
         <div class="col-md-6">
             <div class="mb-3">
-                <label asp-for="InquilinoId" class="form-label"></label>
-                <select asp-for="InquilinoId" class="form-select" asp-items="ViewBag.InquilinoId">
-                    <option value="">Seleccione un inquilino</option>
-                </select>
+                <label asp-for="InquilinoId" class="form-label">Inquilino</label>
+                <input type="text" id="buscarInquilino" class="form-control" placeholder="Escriba nombre...">
+                <input type="hidden" name="InquilinoId" id="InquilinoId">
+                <div id="sugerencias" class="list-group position-absolute w-50"></div>
                 <span asp-validation-for="InquilinoId" class="text-danger"></span>
             </div>
         </div>
         <div class="col-md-6">
             <div class="mb-3">
-                <label asp-for="InmuebleId" class="form-label"></label>
-                <input asp-for="InmuebleId" class="form-control" />
+                <label asp-for="InmuebleId" class="form-label">Inmueble</label>
+                @* <select asp-for="InmuebleId" class="form-select" asp-items="ViewBag.InmuebleId">
+                    <option value="">Seleccione un inmueble</option>
+                </select> *@
+                <select asp-for="InmuebleId" class="form-select">
+                    <option value="">Seleccione un inmueble</option>
+                </select>
                 <span asp-validation-for="InmuebleId" class="text-danger"></span>
                 <div id="inmuebleError" class="text-danger"></div>
-                <small class="text-muted">Ingrese el ID del inmueble a contratar</small>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="mb-3">
-                <label asp-for="FechaInicio" class="form-label"></label>
-                <input asp-for="FechaInicio" class="form-control" type="date" />
-                <span asp-validation-for="FechaInicio" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="mb-3">
-                <label asp-for="FechaFinOriginal" class="form-label"></label>
-                <input asp-for="FechaFinOriginal" class="form-control" type="date" />
-                <span asp-validation-for="FechaFinOriginal" class="text-danger"></span>
-            </div>
-        </div>
-    </div>
 
     <div class="row">
         <div class="col-md-6">
@@ -65,63 +83,132 @@
         </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="RenovadoDeId" class="form-label"></label>
-        <input asp-for="RenovadoDeId" class="form-control" type="number" />
-        <span asp-validation-for="RenovadoDeId" class="text-danger"></span>
-        <small class="text-muted">Opcional: ID del contrato del cual se renueva</small>
-    </div>
-
     <div class="mb-4">
         <button type="submit" class="btn btn-primary">Guardar</button>
-        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+        <a asp-action="Create" class="btn btn-secondary">Volver a seleccionar fecha</a>
     </div>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // Verificar disponibilidad del inmueble cuando se cambia el campo
-        document.getElementById('InmuebleId').addEventListener('blur', async function() {
-            const inmuebleId = this.value;
-            const errorDiv = document.getElementById('inmuebleError');
-            
-            if (!inmuebleId || inmuebleId <= 0) {
-                errorDiv.innerText = '';
+        const input = document.getElementById("buscarInquilino");
+        const hidden = document.getElementById("InquilinoId");
+        const sugerencias = document.getElementById("sugerencias");
+        let timeout;
+
+        input.addEventListener("input", () => {
+            clearTimeout(timeout);
+            const term = input.value.trim();
+
+            // Si tiene menos de 2 caracteres, limpio la lista
+            if (term.length < 2) {
+                sugerencias.innerHTML = "";
+                hidden.value = "";
                 return;
             }
-            
-            try {
-                const response = await fetch(`/Contrato/VerificarDisponibilidadInmueble?inmuebleId=${encodeURIComponent(inmuebleId)}`);
-                const data = await response.json();
-                
-                if (data && data.mensaje) {
-                    errorDiv.innerText = data.mensaje;
-                } else {
-                    errorDiv.innerText = '';
-                }
-            } catch (e) {
-                console.error('Error al verificar disponibilidad:', e);
-            }
+
+            // Debounce para no disparar fetch por cada tecla
+            timeout = setTimeout(() => {
+                fetch(`/Inquilino/SearchByName?name=${encodeURIComponent(term)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        sugerencias.innerHTML = "";
+                        data.forEach(item => {
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.className = "list-group-item list-group-item-action";
+                            a.textContent = item.nombreCompleto; // Asumiendo que el backend envía nombreCompleto
+
+                            a.addEventListener("click", e => {
+                                e.preventDefault();
+                                input.value = item.nombreCompleto;   // muestra el nombre elegido
+                                hidden.value = item.id;      // guarda el id para el POST
+                                sugerencias.innerHTML = "";  // cierra las sugerencias
+                            });
+
+                            sugerencias.appendChild(a);
+                        });
+                    })
+                    .catch(err => console.error("Error buscando inquilinos:", err));
+            }, 300);
         });
 
-        // Calcular duración automáticamente
-        function calcularDuracion() {
-            const fechaInicio = document.getElementById('FechaInicio').value;
-            const fechaFin = document.getElementById('FechaFinOriginal').value;
-            
-            if (fechaInicio && fechaFin) {
-                const inicio = new Date(fechaInicio);
-                const fin = new Date(fechaFin);
-                
-                if (fin > inicio) {
-                    const diferenciaMeses = (fin.getFullYear() - inicio.getFullYear()) * 12 + (fin.getMonth() - inicio.getMonth());
-                    console.log(`Duración del contrato: ${diferenciaMeses} meses`);
+        async function verificarFechas(event) {
+            event.preventDefault();
+
+            const fechaInicioInput = document.getElementById('fechaInicio');
+            const cantidadMesesInput = document.getElementById('cantidadMeses');
+
+            const fechaErrorDiv = document.getElementById('fechaError');
+            const cantidadMesesErrorDiv = document.getElementById('cantidadMesesError');
+
+            const fechaMensajeDiv = document.getElementById('fechaMensaje');
+
+            // Limpiar mensajes previos
+            fechaErrorDiv.innerText = '';
+            cantidadMesesErrorDiv.innerText = '';
+            fechaMensajeDiv.innerText = '';
+
+            if (cantidadMesesInput.value.trim() === '') {
+                cantidadMesesErrorDiv.innerText = 'La cantidad de meses es obligatoria.';
+                return false;
+            }else if (isNaN(cantidadMesesInput.value) || parseInt(cantidadMesesInput.value) <= 0) {
+                cantidadMesesErrorDiv.innerText = 'La cantidad de meses debe ser un número positivo.';
+                return false;
+            }else if (parseInt(cantidadMesesInput.value) > 49) {
+                cantidadMesesErrorDiv.innerText = 'La cantidad no puede superar los 4 años.';
+                return false;
+            }
+
+            const fechaInicio = new Date(fechaInicioInput.value);
+            const fechaFin = agregarMeses(fechaInicio, parseInt(cantidadMesesInput.value));
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
+            console.log("Fecha de hoy:", hoy);
+            console.log("Fecha de inicio:", fechaInicio);
+            console.log("Fecha de fin:", fechaFin);
+
+            let valid = true;
+
+            if (isNaN(fechaInicio.getTime())) {
+                fechaErrorDiv.innerText = 'Fecha de inicio inválida.';
+                valid = false;
+            } else if (fechaInicio < hoy) {
+                fechaErrorDiv.innerText = 'La fecha de inicio no puede ser en el pasado.';
+                valid = false;
+            }
+
+            if (valid) {
+                const response = await fetch('/Contrato/VerificarInmueblesDisponibles?fechaInicio=' + encodeURIComponent(fechaInicio.toISOString().split('T')[0]) + '&fechaFin=' + encodeURIComponent(fechaFin.toISOString().split('T')[0]));
+                const inmueblesDisponibles = await response.json();
+
+                if (inmueblesDisponibles.inmuebles.count === 0) {
+                    fechaMensajeDiv.innerText = 'No hay inmuebles disponibles en las fechas seleccionadas.';
+                } else {
+                    const selecInmueble = document.getElementById('InmuebleId');
+                    selecInmueble.innerHTML = '<option value="">Seleccione un inmueble</option>';
+                    document.getElementById('fechaInicio2').value = fechaInicio.toISOString().split('T')[0];
+                    document.getElementById('fechaFin2').value = fechaFin.toISOString().split('T')[0];
+                    inmueblesDisponibles.inmuebles.forEach(inmueble => {
+                        const option = document.createElement('option');
+                        option.value = inmueble.id;
+                        option.text = inmueble.direccion;
+                        selecInmueble.appendChild(option);
+                    }); 
+                    document.getElementById('formCrear').style.display = '';
+                    document.getElementById('fechasForm').style.display = 'none';
                 }
             }
+
+            return false;
         }
 
-        document.getElementById('FechaInicio').addEventListener('change', calcularDuracion);
-        document.getElementById('FechaFinOriginal').addEventListener('change', calcularDuracion);
+        function agregarMeses(fecha, meses) {
+            const nuevaFecha = new Date(fecha);
+            nuevaFecha.setMonth(nuevaFecha.getMonth() + meses);
+            return nuevaFecha;
+        }
     </script>
 }

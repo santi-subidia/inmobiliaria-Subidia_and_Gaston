@@ -10,17 +10,28 @@ namespace Inmobiliaria.Controllers
     {
         private readonly IContratoRepository _repo;
         private readonly IInquilinoRepository _inquilinoRepo;
+        private readonly IInmuebleRepository _inmuebleRepo;
+        private readonly IPropietarioRepository _propietarioRepo;
 
-        public ContratoController(IContratoRepository repo, IInquilinoRepository inquilinoRepo)
+        public ContratoController(IContratoRepository repo, IInquilinoRepository inquilinoRepo, IInmuebleRepository inmuebleRepo, IPropietarioRepository propietarioRepo)
         {
             _repo = repo;
             _inquilinoRepo = inquilinoRepo;
+            _inmuebleRepo = inmuebleRepo;
+            _propietarioRepo = propietarioRepo;
         }
 
         // GET: Contrato
         public async Task<IActionResult> Index()
         {
             var contratos = await _repo.GetAllAsync();
+            foreach (var contrato in contratos)
+            {
+                contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+                contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+                if (contrato.Inmueble != null)
+                    contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
+            }
             return View(contratos);
         }
 
@@ -35,7 +46,7 @@ namespace Inmobiliaria.Controllers
         // GET: Contrato/Create
         public async Task<IActionResult> Create()
         {
-            await PrepareViewBagsAsync();
+            PrepareViewBagsAsync();
             return View();
         }
 
@@ -46,30 +57,11 @@ namespace Inmobiliaria.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Verificar que no exista un contrato vigente para el inmueble
-                if (await _repo.ExisteContratoVigenteParaInmuebleAsync(contrato.InmuebleId))
-                {
-                    ModelState.AddModelError("InmuebleId", "Ya existe un contrato vigente para este inmueble.");
-                    await PrepareViewBagsAsync();
-                    return View(contrato);
-                }
-
-                // Verificar fechas lógicas
-                if (contrato.FechaInicio >= contrato.FechaFinOriginal)
-                {
-                    ModelState.AddModelError("FechaFinOriginal", "La fecha de fin debe ser posterior a la fecha de inicio.");
-                    await PrepareViewBagsAsync();
-                    return View(contrato);
-                }
-
-                // Asignar usuario creador (en una app real vendría de la sesión)
-                contrato.CreadoPor = 1; // Temporalmente hardcodeado
-
                 await _repo.CreateAsync(contrato);
                 return RedirectToAction(nameof(Index));
             }
 
-            await PrepareViewBagsAsync();
+            PrepareViewBagsAsync();
             return View(contrato);
         }
 
@@ -79,7 +71,10 @@ namespace Inmobiliaria.Controllers
             var contrato = await _repo.GetByIdAsync(id);
             if (contrato == null) return NotFound();
 
-            await PrepareViewBagsAsync();
+            contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+            contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+
+            PrepareViewBagsAsync();
             return View(contrato);
         }
 
@@ -96,7 +91,7 @@ namespace Inmobiliaria.Controllers
                 if (contrato.FechaInicio >= contrato.FechaFinOriginal)
                 {
                     ModelState.AddModelError("FechaFinOriginal", "La fecha de fin debe ser posterior a la fecha de inicio.");
-                    await PrepareViewBagsAsync();
+                    PrepareViewBagsAsync();
                     return View(contrato);
                 }
 
@@ -105,7 +100,7 @@ namespace Inmobiliaria.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            await PrepareViewBagsAsync();
+            PrepareViewBagsAsync();
             return View(contrato);
         }
 
@@ -132,7 +127,7 @@ namespace Inmobiliaria.Controllers
         {
             var contrato = await _repo.GetByIdAsync(id);
             if (contrato == null) return NotFound();
-            
+
             if (!contrato.PuedeFinalizarse)
             {
                 TempData["Error"] = "Este contrato no puede ser finalizado.";
@@ -163,7 +158,7 @@ namespace Inmobiliaria.Controllers
         {
             var contrato = await _repo.GetByIdAsync(id);
             if (contrato == null) return NotFound();
-            
+
             if (!contrato.PuedeRescindirse)
             {
                 TempData["Error"] = "Este contrato no puede ser rescindido.";
@@ -209,9 +204,9 @@ namespace Inmobiliaria.Controllers
         {
             var contratos = await _repo.GetByInquilinoIdAsync(inquilinoId);
             var inquilino = await _inquilinoRepo.GetByIdAsync(inquilinoId);
-            
+
             if (inquilino == null) return NotFound();
-            
+
             ViewData["Inquilino"] = $"{inquilino.Apellido}, {inquilino.Nombre}";
             return View("Index", contratos);
         }
@@ -221,30 +216,41 @@ namespace Inmobiliaria.Controllers
         public async Task<IActionResult> VerificarDisponibilidadInmueble(long inmuebleId)
         {
             if (inmuebleId <= 0) return Json(null);
-            
+
             var existe = await _repo.ExisteContratoVigenteParaInmuebleAsync(inmuebleId);
             if (existe)
             {
                 return Json(new { mensaje = "Este inmueble ya tiene un contrato vigente." });
             }
-            
+
             return Json(null);
         }
 
-        private async Task PrepareViewBagsAsync()
+        public async Task<IActionResult> VerificarInmueblesDisponibles(DateOnly fechaInicio, DateOnly fechaFin)
         {
-            // Cargar inquilinos para el dropdown
-            var inquilinos = await _inquilinoRepo.GetAllAsync();
-            ViewBag.InquilinoId = new SelectList(inquilinos, "Id", "NombreCompleto");
-            
-            // Para inmuebles, cuando esté disponible se puede agregar:
-            // var inmuebles = await _inmuebleRepo.GetAllAsync();
+            if (fechaInicio == default || fechaFin == default) return Json(null);
+
+            var inmueblesDisponibles = await _inmuebleRepo.GetAllbyFechasAsync(fechaInicio, fechaFin);
+
+            return Json(new { inmuebles = inmueblesDisponibles });
+        }
+
+        private void PrepareViewBagsAsync()
+        {
+            // var inquilinos = await _inquilinoRepo.GetAllAsync();
+            // if (inquilino != null)
+            // {
+            //     inquilinos.ToList().Add(inquilino);
+            // }
+            // ViewBag.InquilinoId = new SelectList(inquilinos, "Id", "NombreCompleto");
+
+            // var inmuebles = (await _inmuebleRepo.GetAllWithFiltersAsync(disponible: true)).ToList();
+            // if (inmueble != null)
+            // {
+            //     inmuebles.Add(inmueble);
+            // }
             // ViewBag.InmuebleId = new SelectList(inmuebles, "Id", "Direccion");
-            
-            // Por ahora, crear una lista temporal para inmuebles
-            ViewBag.InmuebleId = new SelectList(new List<object>(), "Id", "Direccion");
-            
-            // Estados de contrato
+
             ViewBag.Estado = new SelectList(Enum.GetValues<EstadoContrato>());
         }
     }

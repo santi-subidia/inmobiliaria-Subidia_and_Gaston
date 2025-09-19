@@ -94,6 +94,23 @@ namespace Inmobiliaria.Repositories
             return (list, total);
         }
 
+        public async Task<IEnumerable<Inquilino>> SearchByNameAsync(string name)
+        {
+            var list = new List<Inquilino>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            String sql = @"SELECT * FROM inquilinos WHERE (nombre LIKE @namePart OR apellido LIKE @namePart) AND fecha_eliminacion IS NULL
+                           ORDER BY apellido, nombre LIMIT 10";
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@namePart", $"%{name}%");
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapInquilino(reader));
+            }
+            return list;
+        }
+
 
         public async Task<long> CreateAsync(Inquilino i)
         {
