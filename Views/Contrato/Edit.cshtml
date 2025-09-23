@@ -13,9 +13,9 @@
             <div id="fechaError" class="text-danger"></div>
         </div>
         <div class="col-md-6 mb-3">
-            <label for="fechaFin" class="form-label">Fecha de Fin</label>
-            <input type="date" id="fechaFin" name="fechaFin" value="@Model.FechaFinOriginal.ToString("yyyy-MM-dd")" class="form-control" required />
-            <div id="fechaFinError" class="text-danger"></div>
+            <label for="cantidadMeses" class="form-label">Cantidad de Meses</label>
+            <input type="number" id="cantidadMeses" name="cantidadMeses" value="@Model.DuracionEnMeses(@Model.FechaFinOriginal)" class="form-control" required />
+            <div id="cantidadMesesError" class="text-danger"></div>
         </div>
         <div id="fechaMensaje" class="text-info"></div>
     </div>
@@ -24,7 +24,7 @@
 </form>
 
 
-<form id="formEdit" asp-action="Edit" method="post" style="display:none;"">
+<form id="formEdit" asp-action="Edit" method="post" style="display:none;">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="CreadoPor" />
@@ -159,20 +159,37 @@
             event.preventDefault();
 
             const fechaInicioInput = document.getElementById('fechaInicio');
-            const fechaFinInput = document.getElementById('fechaFin');
-            const fechaErrorDiv = document.getElementById('fechaError');
-            const fechaFinErrorDiv = document.getElementById('fechaFinError');
-            const fechaMensajeDiv = document.getElementById('fechaMensaje');
+            const cantidadMesesInput = document.getElementById('cantidadMeses');
 
-            const fechaInicio = new Date(fechaInicioInput.value);
-            const fechaFin = new Date(fechaFinInput.value);
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche
+            const fechaErrorDiv = document.getElementById('fechaError');
+            const cantidadMesesErrorDiv = document.getElementById('cantidadMesesError');
+
+            const fechaMensajeDiv = document.getElementById('fechaMensaje');
 
             // Limpiar mensajes previos
             fechaErrorDiv.innerText = '';
-            fechaFinErrorDiv.innerText = '';
+            cantidadMesesErrorDiv.innerText = '';
             fechaMensajeDiv.innerText = '';
+
+            if (cantidadMesesInput.value.trim() === '') {
+                cantidadMesesErrorDiv.innerText = 'La cantidad de meses es obligatoria.';
+                return false;
+            }else if (isNaN(cantidadMesesInput.value) || parseInt(cantidadMesesInput.value) <= 0) {
+                cantidadMesesErrorDiv.innerText = 'La cantidad de meses debe ser un número positivo.';
+                return false;
+            }else if (parseInt(cantidadMesesInput.value) > 49) {
+                cantidadMesesErrorDiv.innerText = 'La cantidad no puede superar los 4 años.';
+                return false;
+            }
+
+            const fechaInicio = new Date(fechaInicioInput.value);
+            const fechaFin = agregarMeses(fechaInicio, parseInt(cantidadMesesInput.value));
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
+            console.log("Fecha de hoy:", hoy);
+            console.log("Fecha de inicio:", fechaInicio);
+            console.log("Fecha de fin:", fechaFin);
 
             let valid = true;
 
@@ -184,42 +201,35 @@
                 valid = false;
             }
 
-            if (isNaN(fechaFin.getTime())) {
-                fechaFinErrorDiv.innerText = 'Fecha de fin inválida.';
-                valid = false;
-            } else if (fechaFin <= fechaInicio) {
-                fechaFinErrorDiv.innerText = 'La fecha de fin debe ser posterior a la fecha de inicio.';
-                valid = false;
-            }
-
             if (valid) {
-                const response = await fetch('/Contrato/VerificarInmueblesDisponibles?fechaInicio=' + encodeURIComponent(fechaInicioInput.value) + '&fechaFin=' + encodeURIComponent(fechaFinInput.value));
+                const response = await fetch('/Contrato/VerificarInmueblesDisponibles?fechaInicio=' + encodeURIComponent(fechaInicio.toISOString().split('T')[0]) + '&fechaFin=' + encodeURIComponent(fechaFin.toISOString().split('T')[0]) + '&contratoId=' + @Model.Id);
                 const inmueblesDisponibles = await response.json();
-                const selecInmueble = document.getElementById('InmuebleId');
-                document.getElementById('fechaInicio2').value = fechaInicioInput.value;
-                document.getElementById('fechaFin2').value = fechaFinInput.value;
-
-                if(fechaInicioInput.value == '@Model.FechaInicio.ToString("yyyy-MM-dd")' && fechaFinInput.value == '@Model.FechaFinOriginal.ToString("yyyy-MM-dd")') {   
-                        selecInmueble.innerHTML = `<option value="@Model.Inmueble.Id" selected>@Model.Inmueble.Direccion</option>`;
-                }else{
-                    selecInmueble.innerHTML = '<option value="">Seleccione un inmueble</option>';
-                }
 
                 if (inmueblesDisponibles.inmuebles.count === 0) {
                     fechaMensajeDiv.innerText = 'No hay inmuebles disponibles en las fechas seleccionadas.';
                 } else {
+                    const selecInmueble = document.getElementById('InmuebleId');
+                    selecInmueble.innerHTML = '<option value="">Seleccione un inmueble</option>';
+                    document.getElementById('fechaInicio2').value = fechaInicio.toISOString().split('T')[0];
+                    document.getElementById('fechaFin2').value = fechaFin.toISOString().split('T')[0];
                     inmueblesDisponibles.inmuebles.forEach(inmueble => {
                         const option = document.createElement('option');
                         option.value = inmueble.id;
                         option.text = inmueble.direccion;
                         selecInmueble.appendChild(option);
-                    });
+                    }); 
                     document.getElementById('formEdit').style.display = '';
                     document.getElementById('fechasForm').style.display = 'none';
                 }
             }
 
             return false;
+        }
+
+        function agregarMeses(fecha, meses) {
+            const nuevaFecha = new Date(fecha);
+            nuevaFecha.setMonth(nuevaFecha.getMonth() + meses);
+            return nuevaFecha;
         }
     </script>
 }

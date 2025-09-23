@@ -13,7 +13,7 @@ namespace Inmobiliaria.Models
         // FK → contratos.id
         [Required(ErrorMessage = "El contrato es obligatorio")]
         [Display(Name = "Contrato")]
-        public int ContratoId { get; set; }
+        public long ContratoId { get; set; }
 
         // (Opcional) navegación si ya tenés el modelo Contrato
         public Contrato? Contrato { get; set; }
@@ -26,7 +26,7 @@ namespace Inmobiliaria.Models
         [Required(ErrorMessage = "La fecha de pago es obligatoria")]
         [Display(Name = "Fecha de Pago")]
         [DataType(DataType.Date)]
-        public DateTime FechaPago { get; set; }
+        public DateOnly FechaPago { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
         [Required(ErrorMessage = "El concepto es obligatorio")]
         [Display(Name = "Concepto")]
@@ -48,14 +48,13 @@ namespace Inmobiliaria.Models
         [Display(Name = "Estado")]
         [StringLength(20)]
         [RegularExpression("^(Pendiente|Pagado|Anulado)$",
-            ErrorMessage = "Estado inválido. Valores permitidos: Pendiente, Pagado, Anulado")]
-        public string? Estado { get; set; } = "Pendiente";
+            ErrorMessage = "Estado inválido. Valores permitidos: Pagado, Anulado")]
+        public string? Estado { get; set; } = "Pagado";
 
         // Auditoría
         [Required]
         [Display(Name = "Creado por")]
-        [StringLength(60, ErrorMessage = "El nombre de creador no puede exceder los 60 caracteres")]
-        public string? CreadoPor { get; set; }
+        public int? CreadoPorId { get; set; } = 1;
 
         [Required]
         [Display(Name = "Fecha de Creación")]
@@ -63,20 +62,17 @@ namespace Inmobiliaria.Models
         public DateTime CreadoAt { get; set; } = DateTime.UtcNow;
 
         [Display(Name = "Anulado por")]
-        [StringLength(60, ErrorMessage = "El nombre de quien anula no puede exceder los 60 caracteres")]
-        public string? AnuladoPor { get; set; }
+        public int? AnuladoPorId { get; set; }
 
         [Display(Name = "Fecha de Anulación")]
         [DataType(DataType.DateTime)]
         public DateTime? AnuladoAt { get; set; }
 
-        // Similar a tu NombreCompleto: helper de lectura
-        [NotMapped]
         [Display(Name = "¿Está Anulado?")]
         public bool EstaAnulado => (Estado?.Equals("Anulado", StringComparison.OrdinalIgnoreCase) ?? false) || AnuladoAt.HasValue;
 
-        // Si querés normalizar formato para vistas
-        [NotMapped]
         public string ImporteFormateado => Importe.ToString("C");
+
+        public Contrato? contrato { get; set; }
     }
 }

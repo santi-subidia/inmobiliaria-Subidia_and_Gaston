@@ -37,6 +37,52 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
+        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, EstadoContrato? estado = null)
+        {
+            var list = new List<Contrato>();
+
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            // Construir WHERE dinámicamente
+            var whereClause = estado.HasValue ? "WHERE c.estado = @estado" : "";
+
+            // SQL con paginado y filtros
+            string sql = $@"
+                SELECT SQL_CALC_FOUND_ROWS c.*, i.dni, i.apellido, i.nombre 
+                FROM contratos c 
+                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
+                {whereClause}
+                ORDER BY c.creado_at DESC
+                LIMIT @pageSize OFFSET @offset;
+                SELECT FOUND_ROWS();";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@pageSize", pageSize);
+            cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+            
+            if (estado.HasValue)
+                cmd.Parameters.AddWithValue("@estado", estado.Value.ToString());
+
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            // --- 1° resultado: la página de datos ---
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapContrato(reader));
+            }
+
+            // --- 2° resultado: total de registros ---
+            await reader.NextResultAsync();
+            int total = 0;
+            if (await reader.ReadAsync())
+            {
+                total = reader.GetInt32(0);
+            }
+
+            return (list, total);
+        }
+
         public async Task<Contrato?> GetByIdAsync(long id)
         {
             using var conn = _connectionFactory.CreateConnection();
@@ -71,6 +117,32 @@ namespace Inmobiliaria.Repositories
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@inquilinoId", inquilinoId);
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapContrato(reader));
+            }
+            return list;
+        }
+
+        public async Task<IEnumerable<Contrato>> GetVigentesEnRangoAsync(DateOnly fechaDesde, DateOnly fechaHasta)
+        {
+            var list = new List<Contrato>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            
+            string sql = @"
+                SELECT c.*, i.dni, i.apellido, i.nombre 
+                FROM contratos c 
+                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
+                WHERE c.estado = 'VIGENTE'
+                AND c.fecha_inicio <= @fechaHasta
+                AND c.fecha_fin_original >= @fechaDesde
+                ORDER BY c.fecha_inicio ASC";
+                
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@fechaDesde", fechaDesde);
+            cmd.Parameters.AddWithValue("@fechaHasta", fechaHasta);
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -182,9 +254,9 @@ namespace Inmobiliaria.Repositories
             
             string sql = @"
                 INSERT INTO contratos (inmueble_id, inquilino_id, fecha_inicio, fecha_fin_original, 
-                    fecha_fin_efectiva, monto_mensual, estado, renovado_de_id, creado_por, creado_at, finalizado_por, finalizado_at)
+                    fecha_fin_efectiva, monto_mensual, estado, creado_por, creado_at, finalizado_por, finalizado_at)
                 VALUES (@inmueble_id, @inquilino_id, @fecha_inicio, @fecha_fin_original, 
-                    @fecha_fin_efectiva, @monto_mensual, @estado, @renovado_de_id, @creado_por, @creado_at, @finalizado_por, @finalizado_at);
+                    @fecha_fin_efectiva, @monto_mensual, @estado, @creado_por, @creado_at, @finalizado_por, @finalizado_at);
                 SELECT LAST_INSERT_ID();";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -195,7 +267,6 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@fecha_fin_efectiva", contrato.FechaFinEfectiva?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
             cmd.Parameters.AddWithValue("@estado", contrato.Estado.ToString());
-            cmd.Parameters.AddWithValue("@renovado_de_id", contrato.RenovadoDeId ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor ?? 1);
             cmd.Parameters.AddWithValue("@creado_at", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@finalizado_por", contrato.FinalizadoPor ?? (object)DBNull.Value);
@@ -215,7 +286,7 @@ namespace Inmobiliaria.Repositories
                 SET inmueble_id = @inmueble_id, inquilino_id = @inquilino_id, 
                     fecha_inicio = @fecha_inicio, fecha_fin_original = @fecha_fin_original,
                     fecha_fin_efectiva = @fecha_fin_efectiva, monto_mensual = @monto_mensual,
-                    estado = @estado, renovado_de_id = @renovado_de_id
+                    estado = @estado
                 WHERE id = @id";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -227,7 +298,6 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@fecha_fin_efectiva", contrato.FechaFinEfectiva?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
             cmd.Parameters.AddWithValue("@estado", contrato.Estado.ToString());
-            cmd.Parameters.AddWithValue("@renovado_de_id", contrato.RenovadoDeId ?? (object)DBNull.Value);
             
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -318,6 +388,104 @@ namespace Inmobiliaria.Repositories
             return Convert.ToInt32(count) > 0;
         }
 
+        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedWithFiltersAsync(int page, int pageSize, EstadoContrato? estado = null, long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, DateOnly? fechaHasta = null)
+        {
+            var list = new List<Contrato>();
+
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            // Construir WHERE dinámicamente
+            var whereConditions = new List<string>();
+            var parameters = new List<MySqlParameter>();
+
+            if (estado.HasValue)
+            {
+                whereConditions.Add("c.estado = @estado");
+                parameters.Add(new MySqlParameter("@estado", estado.ToString()));
+            }
+
+            if (propietarioId.HasValue)
+            {
+                whereConditions.Add("i.propietario_id = @propietarioId");
+                parameters.Add(new MySqlParameter("@propietarioId", propietarioId.Value));
+            }
+
+            if (inmuebleId.HasValue)
+            {
+                whereConditions.Add("c.inmueble_id = @inmuebleId");
+                parameters.Add(new MySqlParameter("@inmuebleId", inmuebleId.Value));
+            }
+
+            if (fechaDesde.HasValue)
+            {
+                whereConditions.Add("c.fecha_inicio >= @fechaDesde");
+                parameters.Add(new MySqlParameter("@fechaDesde", fechaDesde.Value.ToString("yyyy-MM-dd")));
+            }
+
+            if (fechaHasta.HasValue)
+            {
+                whereConditions.Add("c.fecha_fin_original <= @fechaHasta");
+                parameters.Add(new MySqlParameter("@fechaHasta", fechaHasta.Value.ToString("yyyy-MM-dd")));
+            }
+
+            var whereClause = whereConditions.Any() ? "WHERE " + string.Join(" AND ", whereConditions) : "";
+
+            // SQL con paginado y filtros
+            string sql = $@"
+                SELECT SQL_CALC_FOUND_ROWS c.*, 
+                       inq.dni, inq.apellido, inq.nombre 
+                FROM contratos c 
+                LEFT JOIN inquilinos inq ON c.inquilino_id = inq.id
+                LEFT JOIN inmuebles i ON c.inmueble_id = i.id
+                {whereClause}
+                ORDER BY c.creado_at DESC
+                LIMIT @offset, @pageSize";
+
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+            cmd.Parameters.AddWithValue("@pageSize", pageSize);
+            cmd.Parameters.AddRange(parameters.ToArray());
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapContrato(reader));
+            }
+
+            // Obtener el total
+            await reader.CloseAsync();
+            var countCmd = new MySqlCommand("SELECT FOUND_ROWS()", conn);
+            var total = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+
+            return (list, total);
+        }
+
+        public async Task<IEnumerable<Contrato>> GetProximosVencerAsync(int dias)
+        {
+            var list = new List<Contrato>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            
+            string sql = @"
+                SELECT c.*, inq.dni, inq.apellido, inq.nombre 
+                FROM contratos c 
+                LEFT JOIN inquilinos inq ON c.inquilino_id = inq.id
+                WHERE c.estado = 'VIGENTE' 
+                AND c.fecha_fin_original BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL @dias DAY)
+                ORDER BY c.fecha_fin_original ASC";
+                
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@dias", dias);
+            
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapContrato(reader));
+            }
+            return list;
+        }
+
         private static Contrato MapContrato(MySqlDataReader reader)
         {
             var contrato = new Contrato
@@ -330,7 +498,6 @@ namespace Inmobiliaria.Repositories
                 FechaFinEfectiva = reader.IsDBNull(reader.GetOrdinal("fecha_fin_efectiva")) ? null : DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_efectiva")),
                 MontoMensual = reader.GetDecimal("monto_mensual"),
                 Estado = Enum.Parse<EstadoContrato>(reader.GetString("estado")),
-                RenovadoDeId = reader.IsDBNull(reader.GetOrdinal("renovado_de_id")) ? null : reader.GetUInt32("renovado_de_id"),
                 CreadoPor = reader.IsDBNull(reader.GetOrdinal("creado_por")) ? null : reader.GetInt64("creado_por"),
                 CreadoAt = reader.GetDateTime("creado_at"),
                 FinalizadoPor = reader.IsDBNull(reader.GetOrdinal("finalizado_por")) ? null : reader.GetInt64("finalizado_por"),

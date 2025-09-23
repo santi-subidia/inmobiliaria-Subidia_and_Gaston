@@ -15,10 +15,29 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Propietario
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1)
         {
-            var propietarios = await _repo.GetAllAsync();
-            return View(propietarios);
+            try
+            {
+                const int pageSize = 10;
+                var (items, total) = await _repo.GetPagedAsync(page, pageSize);
+                
+                // Crear el modelo paginado
+                var model = new PagedResult<Propietario>
+                {
+                    Items = items,
+                    TotalCount = total,
+                    PageSize = pageSize,
+                    CurrentPage = page
+                };
+                
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al cargar propietarios: {ex.Message}";
+                return View(new PagedResult<Propietario> { Items = new List<Propietario>(), TotalCount = 0, CurrentPage = 1, PageSize = 10 });
+            }
         }
 
         // GET: Propietario/Details/5

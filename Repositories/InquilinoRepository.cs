@@ -116,8 +116,8 @@ namespace Inmobiliaria.Repositories
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-            String sql = @"INSERT INTO inquilinos (dni, apellido, nombre, telefono, email, direccion, created_at, updated_at, fecha_eliminacion) 
-                        VALUES (@dni, @apellido, @nombre, @telefono, @email, @direccion, @created_at, @updated_at, @fecha_eliminacion); 
+            String sql = @"INSERT INTO inquilinos (dni, apellido, nombre, telefono, email, fecha_eliminacion) 
+                        VALUES (@dni, @apellido, @nombre, @telefono, @email, @fecha_eliminacion); 
                         SELECT LAST_INSERT_ID();";
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@dni", i.Dni);
@@ -125,9 +125,6 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@nombre", i.Nombre);
             cmd.Parameters.AddWithValue("@telefono", i.Telefono ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@email", i.Email);
-            cmd.Parameters.AddWithValue("@direccion", i.Direccion);
-            cmd.Parameters.AddWithValue("@created_at", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@fecha_eliminacion", (object)DBNull.Value);
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt64(result);
@@ -160,14 +157,12 @@ namespace Inmobiliaria.Repositories
                 var sql = @"
             UPDATE inquilinos 
             SET dni=@dni, apellido=@apellido, nombre=@nombre, 
-                telefono=@telefono, email=@email, direccion=@direccion, 
-                updated_at=@updated_at
+                telefono=@telefono, email=@email
             WHERE id=@id;
             
             UPDATE propietarios 
             SET dni=@dni, apellido=@apellido, nombre=@nombre,
-                telefono=@telefono, email=@email, direccion_contacto=@direccion,
-                updated_at=@updated_at
+                telefono=@telefono, email=@email
             WHERE dni=@dni_original AND EXISTS (SELECT 1 FROM propietarios WHERE dni=@dni_original)";
 
                 var cmd = new MySqlCommand(sql, conn, transaction);
@@ -178,8 +173,6 @@ namespace Inmobiliaria.Repositories
                 cmd.Parameters.AddWithValue("@nombre", i.Nombre);
                 cmd.Parameters.AddWithValue("@telefono", i.Telefono ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@email", i.Email);
-                cmd.Parameters.AddWithValue("@direccion", i.Direccion);
-                cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
 
                 var rows = await cmd.ExecuteNonQueryAsync();
 
@@ -228,9 +221,6 @@ namespace Inmobiliaria.Repositories
             Nombre = reader.GetString("nombre"),
             Telefono = reader.IsDBNull(reader.GetOrdinal("telefono")) ? null : reader.GetString("telefono"),
             Email = reader.GetString("email"),
-            Direccion = reader.GetString("direccion"),
-            CreatedAt = reader.GetDateTime("created_at"),
-            UpdatedAt = reader.GetDateTime("updated_at"),
             FechaEliminacion = reader.IsDBNull(reader.GetOrdinal("fecha_eliminacion")) ? null : reader.GetDateTime("fecha_eliminacion")
         };
     }

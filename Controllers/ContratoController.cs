@@ -22,17 +22,98 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Contrato
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, EstadoContrato? estado = null, 
+            long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, 
+            DateOnly? fechaHasta = null, int? proximosVencer = null)
         {
-            var contratos = await _repo.GetAllAsync();
-            foreach (var contrato in contratos)
+            try
             {
-                contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
-                contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
-                if (contrato.Inmueble != null)
-                    contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
+                // Si se solicita filtro de próximos a vencer
+                if (proximosVencer.HasValue)
+                {
+                    var proximosContratos = await _repo.GetProximosVencerAsync(proximosVencer.Value);
+                    
+                    // Cargar datos relacionados
+                    foreach (var contrato in proximosContratos)
+                    {
+                        contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+                        contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+                        if (contrato.Inmueble != null)
+                            contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
+                    }
+                    
+                    // Convertir a PagedResult
+                    var totalProximos = proximosContratos.Count();
+                    var itemsProximos = proximosContratos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+                    var pagedProximos = new PagedResult<Contrato>
+                    {
+                        Items = itemsProximos,
+                        TotalCount = totalProximos,
+                        CurrentPage = page,
+                        PageSize = pageSize
+                    };
+
+                    ViewBag.ProximosVencer = proximosVencer;
+                    await CargarListasParaFiltros();
+                    return View(pagedProximos);
+                }
+
+                // Filtros normales con paginación
+                var (items, total) = await _repo.GetPagedWithFiltersAsync(page, pageSize, estado, propietarioId, inmuebleId, fechaDesde, fechaHasta);
+                
+                // Cargar datos relacionados para cada contrato
+                foreach (var contrato in items)
+                {
+                    contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+                    contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+                    if (contrato.Inmueble != null)
+                        contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
+                }
+                
+                // Crear el modelo paginado
+                var model = new PagedResult<Contrato>
+                {
+                    Items = items,
+                    TotalCount = total,
+                    PageSize = pageSize,
+                    CurrentPage = page
+                };
+                
+                // Mantener filtros en ViewBag
+                ViewBag.FiltroEstado = estado;
+                ViewBag.FiltroPropietario = propietarioId;
+                ViewBag.FiltroInmueble = inmuebleId;
+                ViewBag.FechaDesde = fechaDesde;
+                ViewBag.FechaHasta = fechaHasta;
+
+                await CargarListasParaFiltros();
+                return View(model);
             }
-            return View(contratos);
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al cargar contratos: {ex.Message}";
+                await CargarListasParaFiltros();
+                return View(new PagedResult<Contrato> { Items = new List<Contrato>(), TotalCount = 0, CurrentPage = 1, PageSize = pageSize });
+            }
+        }
+
+        private async Task CargarListasParaFiltros()
+        {
+            try
+            {
+                // Cargar listas para los filtros
+                var propietarios = await _propietarioRepo.GetAllAsync();
+                var inmuebles = await _inmuebleRepo.GetAllAsync();
+                
+                ViewBag.PropietariosLista = propietarios.OrderBy(p => p.Nombre).ToList();
+                ViewBag.InmueblesLista = inmuebles.OrderBy(i => i.Direccion).ToList();
+            }
+            catch
+            {
+                // Si hay error cargando las listas, usar listas vacías
+                ViewBag.PropietariosLista = new List<Propietario>();
+                ViewBag.InmueblesLista = new List<Inmueble>();
+            }
         }
 
         // GET: Contrato/Details/5
@@ -87,14 +168,6 @@ namespace Inmobiliaria.Controllers
 
             if (ModelState.IsValid)
             {
-                // Verificar fechas lógicas
-                if (contrato.FechaInicio >= contrato.FechaFinOriginal)
-                {
-                    ModelState.AddModelError("FechaFinOriginal", "La fecha de fin debe ser posterior a la fecha de inicio.");
-                    PrepareViewBagsAsync();
-                    return View(contrato);
-                }
-
                 var ok = await _repo.UpdateAsync(contrato);
                 if (!ok) return NotFound();
                 return RedirectToAction(nameof(Index));
@@ -184,21 +257,6 @@ namespace Inmobiliaria.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Contrato/Vigentes
-        public async Task<IActionResult> Vigentes()
-        {
-            var contratos = await _repo.GetVigentesAsync();
-            return View("Index", contratos);
-        }
-
-        // GET: Contrato/ProximosVencer
-        public async Task<IActionResult> ProximosVencer(int dias = 30)
-        {
-            var contratos = await _repo.GetProximosAVencerAsync(dias);
-            ViewData["Dias"] = dias;
-            return View(contratos);
-        }
-
         // GET: Contrato/PorInquilino/5
         public async Task<IActionResult> PorInquilino(long inquilinoId)
         {
@@ -211,26 +269,11 @@ namespace Inmobiliaria.Controllers
             return View("Index", contratos);
         }
 
-        // API para verificar disponibilidad de inmueble
-        [HttpGet]
-        public async Task<IActionResult> VerificarDisponibilidadInmueble(long inmuebleId)
-        {
-            if (inmuebleId <= 0) return Json(null);
-
-            var existe = await _repo.ExisteContratoVigenteParaInmuebleAsync(inmuebleId);
-            if (existe)
-            {
-                return Json(new { mensaje = "Este inmueble ya tiene un contrato vigente." });
-            }
-
-            return Json(null);
-        }
-
-        public async Task<IActionResult> VerificarInmueblesDisponibles(DateOnly fechaInicio, DateOnly fechaFin)
+        public async Task<IActionResult> VerificarInmueblesDisponibles(DateOnly fechaInicio, DateOnly fechaFin, long? contratoId = null)
         {
             if (fechaInicio == default || fechaFin == default) return Json(null);
 
-            var inmueblesDisponibles = await _inmuebleRepo.GetAllbyFechasAsync(fechaInicio, fechaFin);
+            var inmueblesDisponibles = await _inmuebleRepo.GetAllbyFechasAsync(fechaInicio, fechaFin, contratoId);
 
             return Json(new { inmuebles = inmueblesDisponibles });
         }
@@ -252,6 +295,71 @@ namespace Inmobiliaria.Controllers
             // ViewBag.InmuebleId = new SelectList(inmuebles, "Id", "Direccion");
 
             ViewBag.Estado = new SelectList(Enum.GetValues<EstadoContrato>());
+        }
+
+        // GET: Contrato/VigentesPorFecha
+        public async Task<IActionResult> VigentesPorFecha(DateOnly? fechaDesde = null, DateOnly? fechaHasta = null)
+        {
+            if (!fechaDesde.HasValue || !fechaHasta.HasValue)
+            {
+                // Valores por defecto: último mes
+                fechaHasta = DateOnly.FromDateTime(DateTime.Now);
+                fechaDesde = fechaHasta.Value.AddDays(-30);
+            }
+
+            var contratos = await _repo.GetVigentesEnRangoAsync(fechaDesde.Value, fechaHasta.Value);
+            
+            foreach (var contrato in contratos)
+            {
+                contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+                contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+                if (contrato.Inmueble != null)
+                    contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
+            }
+
+            ViewBag.FechaDesde = fechaDesde;
+            ViewBag.FechaHasta = fechaHasta;
+            ViewData["Title"] = $"Contratos Vigentes ({fechaDesde:dd/MM/yyyy} - {fechaHasta:dd/MM/yyyy})";
+            
+            return View("Index", contratos);
+        }
+
+        // GET: Contrato/PorInmueble/5
+        public async Task<IActionResult> PorInmueble(long inmuebleId)
+        {
+            var contratos = await _repo.GetByInmuebleIdAsync(inmuebleId);
+            var inmueble = await _inmuebleRepo.GetByIdAsync(inmuebleId);
+
+            if (inmueble == null) return NotFound();
+
+            foreach (var contrato in contratos)
+            {
+                contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+                contrato.Inmueble = inmueble;
+                contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(inmueble.PropietarioId);
+            }
+
+            ViewData["Title"] = $"Contratos del Inmueble: {inmueble.Direccion}";
+            ViewData["Inmueble"] = inmueble.Direccion;
+            return View("Index", contratos);
+        }
+
+        // GET: Contrato/ProximosVencerFlex
+        public async Task<IActionResult> ProximosVencerFlex(int dias = 30)
+        {
+            var contratos = await _repo.GetProximosAVencerAsync(dias);
+            
+            foreach (var contrato in contratos)
+            {
+                contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
+                contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+                if (contrato.Inmueble != null)
+                    contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
+            }
+
+            ViewBag.DiasSeleccionados = dias;
+            ViewData["Title"] = $"Contratos que Vencen en {dias} días";
+            return View("ProximosVencer", contratos);
         }
     }
 }

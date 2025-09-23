@@ -1,4 +1,4 @@
-@model IEnumerable<Inmobiliaria.Models.Inmueble>
+@model PagedResult<Inmobiliaria.Models.Inmueble>
 @{
   ViewData["Title"] = "Inmuebles";
   var propNombres = ViewBag.PropNombres as IDictionary<long, string>; // 👈 long
@@ -8,8 +8,77 @@
 
 <p>
   <a asp-action="Create" class="btn btn-success">+ Nuevo inmueble</a>
-  <a asp-action="Disponibles" class="btn btn-outline-primary ms-2">Ver disponibles</a>
 </p>
+
+<!-- Filtros -->
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <!-- Campo oculto para mantener la página al filtrar -->
+      <input type="hidden" name="page" value="1" />
+      
+      <div class="col-md-3">
+        <label for="suspendido" class="form-label">Disponibilidad</label>
+        <select name="suspendido" id="suspendido" class="form-select">
+          <option value="">Todos</option>
+          <option value="false" selected="@(ViewBag.FiltroSuspendido?.ToString() == "False")">Disponibles</option>
+          <option value="true" selected="@(ViewBag.FiltroSuspendido?.ToString() == "True")">Suspendidos</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="propietarioId" class="form-label">Propietario</label>
+        <select name="propietarioId" id="propietarioId" class="form-select">
+          <option value="">Todos los propietarios</option>
+          @if (propNombres != null)
+          {
+            @foreach (var prop in propNombres.OrderBy(p => p.Value))
+            {
+              <option value="@prop.Key" selected="@(ViewBag.FiltroPropietarioId?.ToString() == prop.Key.ToString())">
+                @prop.Value
+              </option>
+            }
+          }
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary me-2">
+          <i class="fas fa-search"></i> Filtrar
+        </button>
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+          <i class="fas fa-times"></i> Limpiar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Contador de resultados -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <span class="text-muted">
+      Mostrando @Model.Items.Count() de @Model.TotalCount inmueble@(Model.TotalCount != 1 ? "s" : "")
+      @if (ViewBag.FiltroSuspendido != null || ViewBag.FiltroPropietarioId != null)
+      {
+        <span class="badge bg-info">Filtros aplicados</span>
+      }
+    </span>
+  </div>
+  <div>
+    @if (ViewBag.FiltroSuspendido?.ToString() == "False")
+    {
+      <span class="badge bg-success">Solo disponibles</span>
+    }
+    else if (ViewBag.FiltroSuspendido?.ToString() == "True")
+    {
+      <span class="badge bg-danger">Solo suspendidos</span>
+    }
+    @if (ViewBag.FiltroPropietarioId != null && propNombres?.ContainsKey((long)ViewBag.FiltroPropietarioId) == true)
+    {
+      var propietarioId = (long)ViewBag.FiltroPropietarioId;
+      <span class="badge bg-primary">@propNombres![propietarioId]</span>
+    }
+  </div>
+</div>
 
 <table class="table table-striped table-hover align-middle">
   <thead class="table-light">
@@ -26,7 +95,7 @@
     </tr>
   </thead>
   <tbody>
-    @foreach (var i in Model)
+    @foreach (var i in Model.Items)
     {
       var propKey = Convert.ToInt64(i.PropietarioId);
       var tipoKey = Convert.ToInt64(i.TipoId);
@@ -77,3 +146,102 @@
     }
   </tbody>
 </table>
+
+<!-- Paginación -->
+@if (Model.TotalPages > 1)
+{
+  <nav aria-label="Paginación de inmuebles">
+    <ul class="pagination justify-content-center mt-4">
+      <!-- Botón Anterior -->
+      @if (Model.CurrentPage > 1)
+      {
+        <li class="page-item">
+          <a class="page-link" href="@Url.Action("Index", new { 
+               page = Model.CurrentPage - 1, 
+               suspendido = ViewBag.FiltroSuspendido, 
+               propietarioId = ViewBag.FiltroPropietarioId 
+             })">Anterior</a>
+        </li>
+      }
+      else
+      {
+        <li class="page-item disabled">
+          <span class="page-link">Anterior</span>
+        </li>
+      }
+
+      <!-- Números de página -->
+      @{
+        int startPage = Math.Max(1, Model.CurrentPage - 2);
+        int endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+      }
+
+      @if (startPage > 1)
+      {
+        <li class="page-item">
+          <a class="page-link" href="@Url.Action("Index", new { 
+               page = 1, 
+               suspendido = ViewBag.FiltroSuspendido, 
+               propietarioId = ViewBag.FiltroPropietarioId 
+             })">1</a>
+        </li>
+        @if (startPage > 2)
+        {
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        }
+      }
+
+      @for (int i = startPage; i <= endPage; i++)
+      {
+        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+          <a class="page-link" href="@Url.Action("Index", new { 
+               page = i, 
+               suspendido = ViewBag.FiltroSuspendido, 
+               propietarioId = ViewBag.FiltroPropietarioId 
+             })">@i</a>
+        </li>
+      }
+
+      @if (endPage < Model.TotalPages)
+      {
+        @if (endPage < Model.TotalPages - 1)
+        {
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        }
+        <li class="page-item">
+          <a class="page-link" href="@Url.Action("Index", new { 
+               page = Model.TotalPages, 
+               suspendido = ViewBag.FiltroSuspendido, 
+               propietarioId = ViewBag.FiltroPropietarioId 
+             })">@Model.TotalPages</a>
+        </li>
+      }
+
+      <!-- Botón Siguiente -->
+      @if (Model.CurrentPage < Model.TotalPages)
+      {
+        <li class="page-item">
+          <a class="page-link" href="@Url.Action("Index", new { 
+               page = Model.CurrentPage + 1, 
+               suspendido = ViewBag.FiltroSuspendido, 
+               propietarioId = ViewBag.FiltroPropietarioId 
+             })">Siguiente</a>
+        </li>
+      }
+      else
+      {
+        <li class="page-item disabled">
+          <span class="page-link">Siguiente</span>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <!-- Info de paginación -->
+  <div class="text-center text-muted mt-2">
+    <small>
+      Página @Model.CurrentPage de @Model.TotalPages 
+      (@Model.Items.Count() de @Model.TotalCount resultados)
+    </small>
+  </div>
+}

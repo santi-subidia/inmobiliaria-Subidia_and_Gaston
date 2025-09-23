@@ -55,26 +55,6 @@ namespace Inmobiliaria.Models
         [Column("email")]
         public string? Email { get; set; }
 
-        [Required(ErrorMessage = "La dirección es obligatoria")]
-        [Display(Name = "Dirección de contacto")]
-        [StringLength(200, MinimumLength = 5, ErrorMessage = "La dirección debe tener entre 5 y 200 caracteres")]
-        [RegularExpression(@"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s#.,-]+$", 
-            ErrorMessage = "La dirección solo puede contener letras, números, espacios y los caracteres #.,-")]
-        [Column("direccion_contacto")]
-        public string? DireccionContacto { get; set; }
-
-        [Required]
-        [Display(Name = "Fecha de Creación")]
-        [DataType(DataType.DateTime)]
-        [Column("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        [Required]
-        [Display(Name = "Última Actualización")]
-        [DataType(DataType.DateTime)]
-        [Column("updated_at")]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
         [Display(Name = "Fecha de Eliminación")]
         [DataType(DataType.DateTime)]
         [Column("fecha_eliminacion")]

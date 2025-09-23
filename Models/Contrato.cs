@@ -41,9 +41,6 @@ namespace Inmobiliaria.Models
         [Display(Name = "Estado")]
         public EstadoContrato Estado { get; set; } = EstadoContrato.VIGENTE;
 
-        [Display(Name = "Renovado de ID")]
-        public long? RenovadoDeId { get; set; }
-
         //[Required(ErrorMessage = "El creador es obligatorio")]
         [Display(Name = "Creado por")]
         public long? CreadoPor { get; set; }
@@ -70,15 +67,34 @@ namespace Inmobiliaria.Models
                                   FechaInicio <= DateOnly.FromDateTime(DateTime.Now) &&
                                   (FechaFinEfectiva ?? FechaFinOriginal) >= DateOnly.FromDateTime(DateTime.Now);
 
-        public int DuracionEnMeses => 
-            ((FechaFinOriginal.Year - FechaInicio.Year) * 12) + 
-            (FechaFinOriginal.Month - FechaInicio.Month);
+        public int DuracionEnMeses (DateOnly fechaPost) =>
+            ((fechaPost.Year - FechaInicio.Year) * 12) +
+            (fechaPost.Month - FechaInicio.Month);
 
-        public decimal MontoTotal => MontoMensual * DuracionEnMeses;
+        public decimal MontoTotal => MontoMensual * DuracionEnMeses(FechaFinOriginal);
+
+        public decimal MontoMulta => FechaFinEfectiva.HasValue && FechaFinEfectiva < FechaFinOriginal
+            ? MontoMensual * multipliciadMulta()
+            : 0;
+
+        private int multipliciadMulta()
+        {
+            if (FechaFinEfectiva.HasValue && DuracionEnMeses(FechaFinOriginal) / 2 <= DuracionEnMeses(FechaFinEfectiva.Value))
+            {
+                return 1;
+            }
+            else
+            {
+                return 2;
+
+            }
+        }
 
         public bool PuedeFinalizarse => Estado == EstadoContrato.VIGENTE;
 
         public bool PuedeRescindirse => Estado == EstadoContrato.VIGENTE;
+        
+
     }
 
     public enum EstadoContrato

@@ -94,9 +94,9 @@ namespace Inmobiliaria.Repositories
 
             const string sql = @"
 INSERT INTO propietarios
-(dni, apellido, nombre, telefono, email, direccion_contacto, created_at, updated_at, fecha_eliminacion)
+(dni, apellido, nombre, telefono, email, fecha_eliminacion)
 VALUES
-(@dni, @apellido, @nombre, @telefono, @email, @direccion_contacto, @created_at, @updated_at, @fecha_eliminacion);
+(@dni, @apellido, @nombre, @telefono, @email, @fecha_eliminacion);
 SELECT LAST_INSERT_ID();";
 
             using var cmd = new MySqlCommand(sql, conn);
@@ -105,9 +105,6 @@ SELECT LAST_INSERT_ID();";
             cmd.Parameters.AddWithValue("@nombre", p.Nombre);
             cmd.Parameters.AddWithValue("@telefono", (object?)p.Telefono ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@email", (object?)p.Email ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@direccion_contacto", (object?)p.DireccionContacto ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@created_at", p.CreatedAt == default ? DateTime.UtcNow : p.CreatedAt);
-            cmd.Parameters.AddWithValue("@updated_at", p.UpdatedAt == default ? DateTime.UtcNow : p.UpdatedAt);
             cmd.Parameters.AddWithValue("@fecha_eliminacion", (object?)p.FechaEliminacion ?? DBNull.Value);
 
             var result = await cmd.ExecuteScalarAsync();
@@ -125,9 +122,7 @@ UPDATE propietarios SET
   apellido           = @apellido,
   nombre             = @nombre,
   telefono           = @telefono,
-  email              = @email,
-  direccion_contacto = @direccion_contacto,
-  updated_at         = @updated_at
+  email              = @email
 WHERE id = @id;";
 
             using var cmd = new MySqlCommand(sql, conn);
@@ -137,8 +132,6 @@ WHERE id = @id;";
             cmd.Parameters.AddWithValue("@nombre", p.Nombre);
             cmd.Parameters.AddWithValue("@telefono", (object?)p.Telefono ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@email", (object?)p.Email ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@direccion_contacto", (object?)p.DireccionContacto ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
 
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -153,12 +146,11 @@ WHERE id = @id;";
             await conn.OpenAsync();
 
             const string sql = @"UPDATE propietarios 
-                                 SET fecha_eliminacion=@fecha, updated_at=@updated 
+                                 SET fecha_eliminacion=@fecha 
                                  WHERE id=@id";
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.Parameters.AddWithValue("@fecha", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow);
 
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -178,14 +170,46 @@ WHERE id = @id;";
             await conn.OpenAsync();
 
             const string sql = @"UPDATE propietarios 
-                                 SET fecha_eliminacion=NULL, updated_at=@updated 
+                                 SET fecha_eliminacion=NULL 
                                  WHERE id=@id";
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
-            cmd.Parameters.AddWithValue("@updated", DateTime.UtcNow);
 
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
+        }
+
+        public async Task<(IEnumerable<Propietario> Items, int TotalCount)> GetPagedAsync(int page = 1, int pageSize = 10)
+        {
+            var list = new List<Propietario>();
+
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            // SQL con paginado
+            string sql = @"
+                SELECT SQL_CALC_FOUND_ROWS *
+                FROM propietarios 
+                WHERE fecha_eliminacion IS NULL
+                ORDER BY apellido, nombre
+                LIMIT @offset, @pageSize";
+
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+            cmd.Parameters.AddWithValue("@pageSize", pageSize);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(Map(reader));
+            }
+
+            // Obtener el total
+            await reader.CloseAsync();
+            var countCmd = new MySqlCommand("SELECT FOUND_ROWS()", conn);
+            var total = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+
+            return (list, total);
         }
 
         // =========================
@@ -199,9 +223,6 @@ WHERE id = @id;";
             Nombre            = r.GetString("nombre"),
             Telefono          = r.IsDBNull(r.GetOrdinal("telefono")) ? null : r.GetString("telefono"),
             Email             = r.IsDBNull(r.GetOrdinal("email")) ? null : r.GetString("email"),
-            DireccionContacto = r.IsDBNull(r.GetOrdinal("direccion_contacto")) ? null : r.GetString("direccion_contacto"),
-            CreatedAt         = r.GetDateTime("created_at"),
-            UpdatedAt         = r.GetDateTime("updated_at"),
             FechaEliminacion  = r.IsDBNull(r.GetOrdinal("fecha_eliminacion")) ? null : r.GetDateTime("fecha_eliminacion")
         };
     }

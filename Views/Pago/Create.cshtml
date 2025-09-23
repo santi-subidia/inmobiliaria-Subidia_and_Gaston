@@ -1,62 +1,204 @@
 @model Inmobiliaria.Models.Pago
 @{
     ViewData["Title"] = "Registrar Pago";
+    var contrato = ViewBag.Contrato as Inmobiliaria.Models.Contrato;
+    var montoTotal = (decimal)ViewBag.MontoTotal;
+    var montoPagado = (decimal)ViewBag.MontoPagado;
+    var saldoPendiente = (decimal)ViewBag.SaldoPendiente;
+    var montoMensual = (decimal)ViewBag.MontoMensual;
+    var cantidadPagos = (int)ViewBag.CantidadPagos;
+    var porcentajePagado = montoTotal > 0 ? (montoPagado / montoTotal) * 100 : 0;
 }
 
-<h2 class="mb-3">@ViewData["Title"]</h2>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">@ViewData["Title"]</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-<form asp-action="Create" method="post" class="card card-body">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="ContratoId" class="form-label">Contrato</label>
+                            <input asp-for="ContratoId" class="form-control" readonly />
+                            <div class="form-text">Contrato #@Model.ContratoId seleccionado automáticamente</div>
+                        </div>
 
-    <div class="row g-3">
-        <div class="col-md-4">
-            <label asp-for="ContratoId" class="form-label"></label>
-            <select asp-for="ContratoId" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Contratos">
-                <option value="">-- Seleccionar contrato --</option>
-            </select>
-            <span asp-validation-for="ContratoId" class="text-danger"></span>
-        </div>
+                        <div class="col-md-6">
+                            <label asp-for="NumeroPago" class="form-label">Número de Pago</label>
+                            <input asp-for="NumeroPago" class="form-control" readonly />
+                            <div class="form-text">Próximo número de pago para este contrato</div>
+                            <span asp-validation-for="NumeroPago" class="text-danger"></span>
+                        </div>
 
-        <div class="col-md-4">
-            <label asp-for="NumeroPago" class="form-label"></label>
-            <input asp-for="NumeroPago" class="form-control" />
-            <span asp-validation-for="NumeroPago" class="text-danger"></span>
-        </div>
+                        <div class="col-md-6">
+                            <label asp-for="FechaPago" class="form-label">Fecha de Pago</label>
+                            <input asp-for="FechaPago" class="form-control" readonly/>
+                            <span asp-validation-for="FechaPago" class="text-danger"></span>
+                        </div>
 
-        <div class="col-md-4">
-            <label asp-for="FechaPago" class="form-label"></label>
-            <input asp-for="FechaPago" class="form-control" type="date" />
-            <span asp-validation-for="FechaPago" class="text-danger"></span>
-        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Concepto" class="form-label">Concepto</label>
+                            <input asp-for="Concepto" class="form-control" placeholder="Ej: Alquiler mes @DateTime.Now.ToString("MMMM yyyy")" />
+                            <span asp-validation-for="Concepto" class="text-danger"></span>
+                        </div>
 
-        <div class="col-md-6">
-            <label asp-for="Concepto" class="form-label"></label>
-            <input asp-for="Concepto" class="form-control" />
-            <span asp-validation-for="Concepto" class="text-danger"></span>
-        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Importe" class="form-label">Importe</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="Importe" class="form-control" step="0.01" min="0.01" max="@saldoPendiente" />
+                            </div>
+                            <div class="form-text">
+                                Máximo permitido: <strong>$@saldoPendiente.ToString("N2")</strong>
+                            </div>
+                            <span asp-validation-for="Importe" class="text-danger"></span>
+                        </div>
 
-        <div class="col-md-3">
-            <label asp-for="Importe" class="form-label"></label>
-            <input asp-for="Importe" class="form-control" />
-            <span asp-validation-for="Importe" class="text-danger"></span>
-        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Acciones Rápidas</label>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setMonto(@montoMensual)">
+                                    Monto Mensual ($@montoMensual.ToString("N2"))
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="setMonto(@saldoPendiente)">
+                                    Pago Total ($@saldoPendiente.ToString("N2"))
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="col-md-3">
-            <label asp-for="Estado" class="form-label"></label>
-            <select asp-for="Estado" class="form-select">
-                <option>Pendiente</option>
-                <option>Pagado</option>
-                <option>Anulado</option>
-            </select>
-            <span asp-validation-for="Estado" class="text-danger"></span>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Registrar Pago
+                        </button>
+                        <a asp-action="IndexByContrato" asp-route-id="@Model.ContratoId" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver a Pagos
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
-    <div class="mt-3">
-        <button type="submit" class="btn btn-primary">Guardar</button>
-        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+    <div class="col-md-4">
+        <!-- Información del Contrato -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Información del Contrato</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Contrato:</strong></td>
+                        <td>#@(contrato?.Id ?? 0)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Estado:</strong></td>
+                        <td>
+                            @if(contrato?.Estado == Inmobiliaria.Models.EstadoContrato.VIGENTE)
+                            {
+                                <span class="badge bg-success">@contrato.Estado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@contrato?.Estado</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Período:</strong></td>
+                        <td>@contrato?.FechaInicio.ToString("dd/MM/yyyy") - @contrato?.FechaFinOriginal.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monto Mensual:</strong></td>
+                        <td class="text-primary fw-bold">$@montoMensual.ToString("N2")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resumen de Pagos -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Resumen de Pagos</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="h4 text-info mb-1">@cantidadPagos</div>
+                        <small class="text-muted">Pagos Realizados</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 text-success mb-1">@((porcentajePagado).ToString("F1"))%</div>
+                        <small class="text-muted">Completado</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 text-primary mb-1">@(Model.NumeroPago)</div>
+                        <small class="text-muted">Próximo Pago</small>
+                    </div>
+                </div>
+
+                <!-- Barra de Progreso -->
+                <div class="progress mb-3" style="height: 10px;">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: @(porcentajePagado)%" 
+                         aria-valuenow="@porcentajePagado" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Total Contrato:</strong></td>
+                        <td class="text-end">$@montoTotal.ToString("N2")</td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><strong>Total Pagado:</strong></td>
+                        <td class="text-end">$@montoPagado.ToString("N2")</td>
+                    </tr>
+                    <tr class="table-warning">
+                        <td><strong>Saldo Pendiente:</strong></td>
+                        <td class="text-end fw-bold">$@saldoPendiente.ToString("N2")</td>
+                    </tr>
+                </table>
+
+                @if (saldoPendiente <= montoMensual)
+                {
+                    <div class="alert alert-info alert-sm">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>¡Último pago!</strong> Este podría ser el pago final del contrato.
+                    </div>
+                }
+            </div>
+        </div>
     </div>
-</form>
+</div>
+
+<script>
+function setMonto(monto) {
+    document.getElementById('Importe').value = monto.toFixed(2);
+}
+
+// Validación en tiempo real del importe máximo
+document.addEventListener('DOMContentLoaded', function() {
+    const importeInput = document.getElementById('Importe');
+    const maxMonto = @saldoPendiente;
+    
+    importeInput.addEventListener('input', function() {
+        const valor = parseFloat(this.value);
+        if (valor > maxMonto) {
+            this.setCustomValidity(`El importe no puede ser superior a $${maxMonto.toFixed(2)}`);
+        } else if (valor <= 0) {
+            this.setCustomValidity('El importe debe ser mayor a cero');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+});
+</script>
 
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

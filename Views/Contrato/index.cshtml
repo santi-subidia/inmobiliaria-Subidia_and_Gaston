@@ -1,4 +1,4 @@
-@model IEnumerable<Inmobiliaria.Models.Contrato>
+@model PagedResult<Inmobiliaria.Models.Contrato>
 @{
     ViewData["Title"] = "Contratos";
 }
@@ -7,8 +7,190 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <a asp-action="Create" class="btn btn-success">+ Nuevo contrato</a>
-        <a asp-action="Vigentes" class="btn btn-info">Ver Vigentes</a>
-        <a asp-action="ProximosVencer" class="btn btn-warning">Próximos a Vencer</a>
+    </div>
+</div>
+
+<!-- Filtros avanzados -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-filter"></i> Filtros y Reportes</h6>
+    </div>
+    <div class="card-body">
+        <form id="filterForm" method="get" class="row g-3 align-items-end">
+            <!-- Campo oculto para mantener la página al filtrar -->
+            <input type="hidden" name="page" value="1" />
+            
+            <!-- Estado -->
+            <div class="col-md-2">
+                <label for="estado" class="form-label">Estado</label>
+                <select name="estado" id="estado" class="form-select">
+                    <option value="">Todos</option>
+                    @if (ViewBag.FiltroEstado?.ToString() == "VIGENTE")
+                    {
+                        <option value="VIGENTE" selected>Vigente</option>
+                    }
+                    else
+                    {
+                        <option value="VIGENTE">Vigente</option>
+                    }
+                    @if (ViewBag.FiltroEstado?.ToString() == "FINALIZADO")
+                    {
+                        <option value="FINALIZADO" selected>Finalizado</option>
+                    }
+                    else
+                    {
+                        <option value="FINALIZADO">Finalizado</option>
+                    }
+                    @if (ViewBag.FiltroEstado?.ToString() == "RESCINDIDO")
+                    {
+                        <option value="RESCINDIDO" selected>Rescindido</option>
+                    }
+                    else
+                    {
+                        <option value="RESCINDIDO">Rescindido</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Propietario -->
+            <div class="col-md-2">
+                <label for="propietarioId" class="form-label">Propietario</label>
+                <select name="propietarioId" id="propietarioId" class="form-select">
+                    <option value="">Todos</option>
+                    @if (ViewBag.PropietariosLista != null)
+                    {
+                        @foreach (var prop in ViewBag.PropietariosLista as IEnumerable<Inmobiliaria.Models.Propietario>)
+                        {
+                            @if (ViewBag.FiltroPropietario?.ToString() == prop.Id.ToString())
+                            {
+                                <option value="@prop.Id" selected>@prop.NombreCompleto</option>
+                            }
+                            else
+                            {
+                                <option value="@prop.Id">@prop.NombreCompleto</option>
+                            }
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Inmueble -->
+            <div class="col-md-2">
+                <label for="inmuebleId" class="form-label">Inmueble</label>
+                <select name="inmuebleId" id="inmuebleId" class="form-select">
+                    <option value="">Todos</option>
+                    @if (ViewBag.InmueblesLista != null)
+                    {
+                        @foreach (var inm in ViewBag.InmueblesLista as IEnumerable<Inmobiliaria.Models.Inmueble>)
+                        {
+                            @if (ViewBag.FiltroInmueble?.ToString() == inm.Id.ToString())
+                            {
+                                <option value="@inm.Id" selected>@inm.Direccion</option>
+                            }
+                            else
+                            {
+                                <option value="@inm.Id">@inm.Direccion</option>
+                            }
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Fecha Desde -->
+            <div class="col-md-2">
+                <label for="fechaDesde" class="form-label">Desde</label>
+                <input type="date" name="fechaDesde" id="fechaDesde" class="form-control" 
+                       value="@(ViewBag.FechaDesde != null ? ((DateOnly)ViewBag.FechaDesde).ToString("yyyy-MM-dd") : "")" />
+            </div>
+
+            <!-- Fecha Hasta -->
+            <div class="col-md-2">
+                <label for="fechaHasta" class="form-label">Hasta</label>
+                <input type="date" name="fechaHasta" id="fechaHasta" class="form-control" 
+                       value="@(ViewBag.FechaHasta != null ? ((DateOnly)ViewBag.FechaHasta).ToString("yyyy-MM-dd") : "")" />
+            </div>
+        </form>
+
+        <!-- Filtros rápidos -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="btn-toolbar" role="toolbar">
+                    <!-- Botones de acción -->
+                    <div class="btn-group me-3" role="group">
+                        <button type="submit" form="filterForm" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Limpiar
+                        </a>
+                    </div>
+
+                    <!-- Filtros de vencimiento -->
+                    <div class="btn-group me-3" role="group">
+                        <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-clock"></i> Próximos a Vencer
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", new { proximosVencer = 30 })">En 30 días</a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", new { proximosVencer = 60 })">En 60 días</a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", new { proximosVencer = 90 })">En 90 días</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Filtros de fecha rápidos -->
+                    <div class="btn-group me-3" role="group">
+                        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-calendar"></i> Periodos
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="@Url.Action("Index", new { 
+                                estado = "VIGENTE",
+                                fechaDesde = DateOnly.FromDateTime(DateTime.Now.AddDays(-7)), 
+                                fechaHasta = DateOnly.FromDateTime(DateTime.Now) 
+                            })">Última semana</a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", new { 
+                                estado = "VIGENTE",
+                                fechaDesde = DateOnly.FromDateTime(DateTime.Now.AddDays(-30)), 
+                                fechaHasta = DateOnly.FromDateTime(DateTime.Now) 
+                            })">Último mes</a></li>
+                            <li><a class="dropdown-item" href="@Url.Action("Index", new { 
+                                estado = "VIGENTE",
+                                fechaDesde = DateOnly.FromDateTime(DateTime.Now.AddDays(-90)), 
+                                fechaHasta = DateOnly.FromDateTime(DateTime.Now) 
+                            })">Últimos 3 meses</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Solo vigentes -->
+                    <div class="btn-group" role="group">
+                        <a href="@Url.Action("Index", new { estado = "VIGENTE" })" class="btn btn-outline-success">
+                            <i class="fas fa-check"></i> Solo Vigentes
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contador de resultados -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <span class="text-muted">
+            Mostrando @Model.Items.Count() de @Model.TotalCount contrato@(Model.TotalCount != 1 ? "s" : "")
+            @if (ViewBag.FiltroEstado != null)
+            {
+                <span class="badge bg-info">Filtros aplicados</span>
+            }
+        </span>
+    </div>
+    <div>
+        @if (ViewBag.FiltroEstado != null)
+        {
+            var estadoBadgeClass = ViewBag.FiltroEstado.ToString() == "VIGENTE" ? "bg-success" : 
+                                   ViewBag.FiltroEstado.ToString() == "FINALIZADO" ? "bg-secondary" : "bg-danger";
+            <span class="badge @estadoBadgeClass">@ViewBag.FiltroEstado</span>
+        }
     </div>
 </div>
 
@@ -43,7 +225,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var contrato in Model)
+            @foreach (var contrato in Model.Items)
             {
                 <tr class="@(contrato.Estado == EstadoContrato.VIGENTE ? "table-success" : 
                             contrato.Estado == EstadoContrato.FINALIZADO ? "table-secondary" : "table-danger")">
@@ -102,11 +284,13 @@
                             @if (contrato.Estado == EstadoContrato.VIGENTE)
                             {
                                 <a asp-action="Edit" asp-route-id="@contrato.Id" class="btn btn-outline-primary btn-sm">Editar</a>
+                                <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
                                 <a asp-action="Finalizar" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Finalizar</a>
                                 <a asp-action="Rescindir" asp-route-id="@contrato.Id" class="btn btn-outline-danger btn-sm">Rescindir</a>
                             }
                             else if (contrato.Estado == EstadoContrato.FINALIZADO || contrato.Estado == EstadoContrato.RESCINDIDO)
                             {
+                                <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
                                 <span class="btn btn-sm btn-outline-secondary disabled">Finalizado</span>
                             }
                         </div>
@@ -117,7 +301,101 @@
     </table>
 </div>
 
-@if (!Model.Any())
+<!-- Paginación -->
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Paginación de contratos">
+        <ul class="pagination justify-content-center mt-4">
+            <!-- Botón Anterior -->
+            @if (Model.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("Index", new { 
+                         page = Model.CurrentPage - 1, 
+                         estado = ViewBag.FiltroEstado 
+                       })">Anterior</a>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <span class="page-link">Anterior</span>
+                </li>
+            }
+
+            <!-- Números de página -->
+            @{
+                int startPage = Math.Max(1, Model.CurrentPage - 2);
+                int endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+            }
+
+            @if (startPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("Index", new { 
+                         page = 1, 
+                         estado = ViewBag.FiltroEstado 
+                       })">1</a>
+                </li>
+                @if (startPage > 2)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { 
+                         page = i, 
+                         estado = ViewBag.FiltroEstado 
+                       })">@i</a>
+                </li>
+            }
+
+            @if (endPage < Model.TotalPages)
+            {
+                @if (endPage < Model.TotalPages - 1)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("Index", new { 
+                         page = Model.TotalPages, 
+                         estado = ViewBag.FiltroEstado 
+                       })">@Model.TotalPages</a>
+                </li>
+            }
+
+            <!-- Botón Siguiente -->
+            @if (Model.CurrentPage < Model.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("Index", new { 
+                         page = Model.CurrentPage + 1, 
+                         estado = ViewBag.FiltroEstado 
+                       })">Siguiente</a>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <span class="page-link">Siguiente</span>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    <!-- Info de paginación -->
+    <div class="text-center text-muted mt-2">
+        <small>
+            Página @Model.CurrentPage de @Model.TotalPages 
+            (@Model.Items.Count() de @Model.TotalCount resultados)
+        </small>
+    </div>
+}
+
+@if (!Model.Items.Any())
 {
     <div class="alert alert-info" role="alert">
         <i class="bi bi-info-circle"></i> No hay contratos registrados.

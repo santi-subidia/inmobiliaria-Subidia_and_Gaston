@@ -9,14 +9,14 @@ namespace Inmobiliaria.Controllers
     {
         private readonly IInmuebleRepository _repo;
         private readonly IPropietarioRepository _propietarioRepo;
-        private readonly ITipoInmuebleRepository _tipoRepo; // asumido
+        private readonly ITipoInmuebleRepository _tipoRepo;
         private readonly IImagenRepository _imagenRepo;
         private readonly IWebHostEnvironment _env;
 
         public InmuebleController(
             IInmuebleRepository repo,
             IPropietarioRepository propietarioRepo,
-            ITipoInmuebleRepository tipoRepo, // si no lo tenés, lo quitamos y seteamos TipoId manual
+            ITipoInmuebleRepository tipoRepo,
             IImagenRepository imagenRepo,
             IWebHostEnvironment env)
         {
@@ -28,9 +28,23 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Inmueble
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, bool? suspendido = null, long? propietarioId = null)
         {
-            var inmuebles = await _repo.GetAllWithFiltersAsync();
+            // Usar el método paginado con filtros en SQL
+            var (items, total) = await _repo.GetPagedAsync(page, pageSize, suspendido, propietarioId);
+            
+            // Crear el modelo paginado
+            var model = new PagedResult<Inmueble>
+            {
+                Items = items,
+                TotalCount = total,
+                PageSize = pageSize,
+                CurrentPage = page
+            };
+            
+            // Pasar los filtros a la vista
+            ViewBag.FiltroSuspendido = suspendido;
+            ViewBag.FiltroPropietarioId = propietarioId;
 
             // Propietarios: clave long para evitar mismatch
             var propietarios = await _propietarioRepo.GetAllAsync();
@@ -47,7 +61,7 @@ namespace Inmobiliaria.Controllers
             ViewBag.PropNombres = mapProp;
             ViewBag.TipoNombres = mapTipo;
 
-            return View(inmuebles);
+            return View(model);
         }
 
 
@@ -141,7 +155,27 @@ namespace Inmobiliaria.Controllers
         // GET: Inmueble/PorPropietario/3
         public async Task<IActionResult> PorPropietario(long id)
         {
+            var propietario = await _propietarioRepo.GetByIdAsync(id);
+            if (propietario == null) return NotFound();
+
             var lista = await _repo.GetByPropietarioAsync(id);
+            
+            // Preparar datos para la vista (como en Index)
+            var propietarios = await _propietarioRepo.GetAllAsync();
+            var mapProp = propietarios.ToDictionary(
+                p => (long)p.Id,                                 
+                p => $"{p.Apellido}, {p.Nombre}");
+
+            var tipos = await _tipoRepo.GetAllAsync();
+            var mapTipo = tipos.ToDictionary(
+                t => (long)t.Id,                                 
+                t => t.Nombre ?? $"Tipo {t.Id}");
+
+            ViewBag.PropNombres = mapProp;
+            ViewBag.TipoNombres = mapTipo;
+            ViewBag.PropietarioSeleccionado = propietario.NombreCompleto;
+            ViewData["Title"] = $"Inmuebles de {propietario.NombreCompleto}";
+            
             return View("Index", lista);
         }
 

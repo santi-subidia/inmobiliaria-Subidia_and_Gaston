@@ -10,9 +10,6 @@ namespace Inmobiliaria.Controllers
         private readonly IPagoRepository _repo;
         private readonly IContratoRepository _contratoRepo;
 
-        // Simulación de usuario actual para auditoría (remplazar por tu user real)
-        private string UsuarioActual => User?.Identity?.Name ?? "sistema";
-
         public PagoController(IPagoRepository repo, IContratoRepository contratoRepo)
         {
             _repo = repo;
@@ -56,7 +53,7 @@ namespace Inmobiliaria.Controllers
         // GET: Pagos/Existe?contratoId=1&numeroPago=3
         // Útil para validación ajax en el form (evitar duplicado por contrato)
         [HttpGet]
-        public async Task<IActionResult> Existe(int contratoId, int numeroPago)
+        public async Task<IActionResult> Existe(long contratoId, int numeroPago)
         {
             var existe = await _repo.ExistsByContratoAndNumeroAsync(contratoId, numeroPago);
             if (existe)
@@ -65,15 +62,51 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Pagos/Create?contratoId=1
-        public async Task<IActionResult> Create(int? contratoId)
+        public async Task<IActionResult> Create(long? contratoId)
         {
-            await CargarContratosAsync(contratoId);
+            if (!contratoId.HasValue || contratoId <= 0)
+            {
+                TempData["Error"] = "Debe especificar un contrato válido.";
+                return RedirectToAction("Index", "Contrato");
+            }
+
+            var contrato = await _contratoRepo.GetByIdAsync((long)contratoId);
+            if (contrato == null)
+            {
+                TempData["Error"] = "Contrato no encontrado.";
+                return RedirectToAction("Index", "Contrato");
+            }
+
+            // Usar el nuevo método optimizado para obtener estadísticas
+            var (cantidadPagos, montoPagado) = await _repo.GetMontoPagadoAndCantidadPagosByContratoAsync(contratoId.Value);
+            decimal saldoPendiente = contrato.MontoTotal + contrato.MontoMulta - montoPagado;
+            var cantidadPagosTotales = await _repo.GetCantidadPagosByContratoAsync(contratoId.Value);
+            
             var pago = new Pago
             {
-                ContratoId = contratoId ?? 0,
-                FechaPago = DateTime.Today,
-                Estado = "Pendiente"
+                ContratoId = contratoId.Value,
+                NumeroPago = cantidadPagosTotales + 1,
+                FechaPago = DateOnly.FromDateTime(DateTime.UtcNow),
+                Estado = "Pagado",
+                Importe = Math.Min(contrato.MontoMensual, saldoPendiente)
             };
+
+            // Información del contrato para la vista
+            ViewBag.Contrato = contrato;
+            ViewBag.MontoMensual = contrato.MontoMensual;
+            ViewBag.MontoTotal = contrato.MontoTotal + contrato.MontoMulta;
+            ViewBag.MontoPagado = montoPagado;
+            ViewBag.SaldoPendiente = saldoPendiente;
+            ViewBag.CantidadPagos = cantidadPagos;
+            ViewBag.MontoMaximoPermitido = saldoPendiente;
+
+            // Si ya está totalmente pagado, mostrar advertencia
+            if (saldoPendiente <= 0)
+            {
+                TempData["Warning"] = "Este contrato ya está totalmente pagado.";
+                return RedirectToAction("IndexByContrato", new { id = contratoId });
+            }
+
             return View(pago);
         }
 
@@ -82,6 +115,32 @@ namespace Inmobiliaria.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Pago pago)
         {
+            // Validar que el contrato existe y obtener información actualizada
+            var contrato = await _contratoRepo.GetByIdAsync(pago.ContratoId);
+            if (contrato == null)
+            {
+                ModelState.AddModelError("", "Contrato no encontrado.");
+                return View(pago);
+            }
+
+            // Calcular saldo pendiente usando el método optimizado
+            var (cantidadPagos, montoPagado) = await _repo.GetMontoPagadoAndCantidadPagosByContratoAsync(pago.ContratoId);
+            decimal saldoPendiente = contrato.MontoTotal + contrato.MontoMulta - montoPagado;
+
+            // Validación del importe máximo permitido
+            if (pago.Importe > saldoPendiente)
+            {
+                ModelState.AddModelError(nameof(pago.Importe), 
+                    $"El importe no puede ser superior al saldo pendiente: ${saldoPendiente:N2}");
+            }
+
+            // Validación de importe mínimo
+            if (pago.Importe <= 0)
+            {
+                ModelState.AddModelError(nameof(pago.Importe), 
+                    "El importe debe ser mayor a cero.");
+            }
+
             if (ModelState.IsValid)
             {
                 // validación de duplicado Nº de pago por contrato
@@ -93,16 +152,33 @@ namespace Inmobiliaria.Controllers
                 }
                 else
                 {
-                    pago.CreadoPor = UsuarioActual;
+                    pago.CreadoPorId = 1; // Por ahora usar usuario fijo, después se puede integrar con sistema de autenticación
                     pago.CreadoAt = DateTime.UtcNow;
+                    pago.Estado = "Pagado";
 
                     await _repo.CreateAsync(pago);
-                    TempData["Msg"] = $"Pago #{pago.NumeroPago} creado para contrato #{pago.ContratoId}.";
-                    return RedirectToAction(nameof(Index), new { contratoId = pago.ContratoId });
+                    TempData["Success"] = $"Pago #{pago.NumeroPago} creado correctamente por ${pago.Importe:N2}.";
+                    
+                    // Verificar si el contrato queda totalmente pagado
+                    decimal nuevoSaldo = saldoPendiente - pago.Importe;
+                    if (nuevoSaldo <= 0)
+                    {
+                        TempData["Info"] = "¡El contrato ha sido totalmente pagado!";
+                    }
+                    
+                    return RedirectToAction("IndexByContrato", new { id = pago.ContratoId });
                 }
             }
 
-            await CargarContratosAsync(pago.ContratoId);
+            // Si hay errores, recargar información del contrato
+            ViewBag.Contrato = contrato;
+            ViewBag.MontoMensual = contrato.MontoMensual;
+            ViewBag.MontoTotal = contrato.MontoTotal + contrato.MontoMulta;
+            ViewBag.MontoPagado = montoPagado;
+            ViewBag.SaldoPendiente = saldoPendiente;
+            ViewBag.CantidadPagos = cantidadPagos;
+            ViewBag.MontoMaximoPermitido = saldoPendiente;
+
             return View(pago);
         }
 
@@ -112,7 +188,6 @@ namespace Inmobiliaria.Controllers
             var pago = await _repo.GetByIdAsync(id);
             if (pago == null) return NotFound();
 
-            await CargarContratosAsync(pago.ContratoId);
             return View(pago);
         }
 
@@ -137,12 +212,12 @@ namespace Inmobiliaria.Controllers
                     var ok = await _repo.UpdateAsync(pago);
                     if (!ok) return NotFound();
 
-                    TempData["Msg"] = $"Pago #{pago.Id} actualizado.";
-                    return RedirectToAction(nameof(Index), new { contratoId = pago.ContratoId });
+                    TempData["Success"] = $"Concepto del pago #{pago.NumeroPago} actualizado correctamente.";
+                    return RedirectToAction("IndexByContrato", new { id = pago.ContratoId });
                 }
             }
 
-            await CargarContratosAsync(pago.ContratoId);
+            // Si hay errores, simplemente retornar la vista sin cargar contratos
             return View(pago);
         }
 
@@ -155,17 +230,17 @@ namespace Inmobiliaria.Controllers
             return View(pago);
         }
 
-        // POST: Pagos/Delete/5  (Anulación)
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(long id)
-        {
-            var ok = await _repo.AnularAsync(id, UsuarioActual);
-            if (!ok) return NotFound();
+        // // POST: Pagos/Delete/5  (Anulación)
+        // [HttpPost, ActionName("Delete")]
+        // [ValidateAntiForgeryToken]
+        // public async Task<IActionResult> DeleteConfirmed(long id)
+        // {
+        //     var ok = await _repo.AnularAsync(id, 1);
+        //     if (!ok) return NotFound();
 
-            TempData["Msg"] = $"Pago #{id} anulado correctamente.";
-            return RedirectToAction(nameof(Index));
-        }
+        //     TempData["Msg"] = $"Pago #{id} anulado correctamente.";
+        //     return RedirectToAction(nameof(Index));
+        // }
 
         // Utilidad: carga combo de contratos
         private async Task CargarContratosAsync(int? contratoSeleccionado = null)
@@ -179,6 +254,66 @@ namespace Inmobiliaria.Controllers
                     Selected = contratoSeleccionado.HasValue && c.Id == contratoSeleccionado.Value
                 })
                 .ToList();
+        }
+
+        // GET: Pago/IndexByContrato/5
+        public async Task<IActionResult> IndexByContrato(long id)
+        {
+            // Obtener el contrato
+            var contrato = await _contratoRepo.GetByIdAsync(id);
+            if (contrato == null)
+            {
+                TempData["Error"] = "Contrato no encontrado.";
+                return RedirectToAction("Index", "Contrato");
+            }
+
+            var pagos = await _repo.GetByContratoIdAsync(id);
+            var (cantidadPagos, totalPagado) = await _repo.GetMontoPagadoAndCantidadPagosByContratoAsync(id);
+            
+            ViewBag.Contrato = contrato;
+            ViewBag.ContratoId = id;
+            ViewBag.TotalPagado = totalPagado;
+
+            return View(pagos);
+        }
+
+        // POST: Pago/AnularPago/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AnularPago(int id, int contratoId)
+        {
+            try
+            {
+                var pago = await _repo.GetByIdAsync(id);
+                if (pago == null)
+                {
+                    TempData["Error"] = "Pago no encontrado.";
+                    return RedirectToAction("IndexByContrato", new { id = contratoId });
+                }
+
+                if (pago.Estado == "Anulado")
+                {
+                    TempData["Warning"] = "El pago ya está anulado.";
+                    return RedirectToAction("IndexByContrato", new { id = contratoId });
+                }
+
+                // Cambiar estado a anulado
+                var ok = await _repo.UpdateEstadoAsync(id, "Anulado");
+                if (ok)
+                {
+                    TempData["Success"] = "Pago anulado correctamente.";
+                }
+                else
+                {
+                    TempData["Error"] = "Error al anular el pago.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al anular el pago: {ex.Message}";
+            }
+
+            return RedirectToAction("IndexByContrato", new { id = contratoId });
         }
     }
 }

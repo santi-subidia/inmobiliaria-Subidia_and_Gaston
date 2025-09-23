@@ -33,6 +33,59 @@ namespace Inmobiliaria.Repositories
 
             return list;
         }
+
+        public async Task<(IEnumerable<Inmueble> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, bool? suspendido = null, long? propietarioId = null)
+        {
+            var list = new List<Inmueble>();
+
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            // Construir WHERE dinámicamente
+            var whereConditions = new List<string>();
+            if (suspendido.HasValue)
+                whereConditions.Add("suspendido = @suspendido");
+            if (propietarioId.HasValue)
+                whereConditions.Add("propietario_id = @propietarioId");
+
+            var whereClause = whereConditions.Count > 0 ? "WHERE " + string.Join(" AND ", whereConditions) : "";
+
+            // SQL con paginado y filtros
+            string sql = $@"
+                SELECT SQL_CALC_FOUND_ROWS *
+                FROM inmuebles
+                {whereClause}
+                ORDER BY id
+                LIMIT @pageSize OFFSET @offset;
+                SELECT FOUND_ROWS();";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@pageSize", pageSize);
+            cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
+            
+            if (suspendido.HasValue)
+                cmd.Parameters.AddWithValue("@suspendido", suspendido.Value);
+            if (propietarioId.HasValue)
+                cmd.Parameters.AddWithValue("@propietarioId", propietarioId.Value);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            // --- 1° resultado: la página de datos ---
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapInmueble(reader));
+            }
+
+            // --- 2° resultado: total de registros ---
+            await reader.NextResultAsync();
+            int total = 0;
+            if (await reader.ReadAsync())
+            {
+                total = reader.GetInt32(0);
+            }
+
+            return (list, total);
+        }
         public async Task<IEnumerable<Inmueble>> GetAllWithFiltersAsync(bool fecha_eliminacion = false, bool suspendido = false, bool disponible = false)
         {
             var list = new List<Inmueble>();
@@ -61,13 +114,13 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        public async Task<IEnumerable<Inmueble>> GetAllbyFechasAsync(DateOnly fechaInicio, DateOnly fechaFin)
+        public async Task<IEnumerable<Inmueble>> GetAllbyFechasAsync(DateOnly fechaInicio, DateOnly fechaFin, long? contratoId = null)
         {
             var list = new List<Inmueble>();
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
 
-            const string sql = @"SELECT *
+            string sql = @"SELECT *
                                 FROM inmuebles i
                                 WHERE
                                     i.fecha_eliminacion IS NULL
@@ -77,12 +130,17 @@ namespace Inmobiliaria.Repositories
                                         FROM contratos c
                                         WHERE c.estado = 'VIGENTE'
                                         AND c.fecha_inicio <= @fechaFin
-                                        AND c.fecha_fin_original >= @fechaInicio
-                                    );
-                                    ";
+                                        AND c.fecha_fin_original >= @fechaInicio";
+
+            if (contratoId.HasValue)
+                sql += " AND c.id != @contratoId);";
+            else
+                sql += ");";    
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@fechaInicio", fechaInicio);
             cmd.Parameters.AddWithValue("@fechaFin", fechaFin);
+            if (contratoId.HasValue)
+                cmd.Parameters.AddWithValue("@contratoId", contratoId.Value);
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())

@@ -45,23 +45,6 @@ namespace Inmobiliaria.Models
             ErrorMessage = "Formato de email inválido. Debe ser: usuario@dominio.com")]
         public string? Email { get; set; }
 
-        [Required(ErrorMessage = "La dirección es obligatoria")]
-        [Display(Name = "Dirección")]
-        [StringLength(200, MinimumLength = 5, ErrorMessage = "La dirección debe tener entre 5 y 200 caracteres")]
-        [RegularExpression(@"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s#.,-]+$", 
-            ErrorMessage = "La dirección solo puede contener letras, números, espacios y los caracteres #.,-")]
-        public string? Direccion { get; set; }
-
-        [Required]
-        [Display(Name = "Fecha de Creación")]
-        [DataType(DataType.DateTime)]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        [Required]
-        [Display(Name = "Última Actualización")]
-        [DataType(DataType.DateTime)]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
         [Display(Name = "Fecha de Eliminación")]
         [DataType(DataType.DateTime)]
         public DateTime? FechaEliminacion { get; set; }
@@ -77,7 +60,6 @@ namespace Inmobiliaria.Models
                 Nombre = propietario.Nombre,
                 Telefono = propietario.Telefono,
                 Email = propietario.Email,
-                Direccion = propietario.DireccionContacto
             };
         }
     }
