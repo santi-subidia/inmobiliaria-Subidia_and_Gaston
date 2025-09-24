@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 23, 2025 at 10:57 PM
+-- Generation Time: Sep 24, 2025 at 02:43 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -35,28 +35,35 @@ CREATE TABLE `contratos` (
   `fecha_fin_original` date NOT NULL,
   `fecha_fin_efectiva` date DEFAULT NULL,
   `monto_mensual` decimal(12,2) NOT NULL,
-  `estado` enum('VIGENTE','FINALIZADO','RESCINDIDO') NOT NULL DEFAULT 'VIGENTE',
   `creado_por` bigint(20) UNSIGNED NOT NULL,
   `creado_at` datetime NOT NULL DEFAULT current_timestamp(),
   `finalizado_por` bigint(20) UNSIGNED DEFAULT NULL,
-  `finalizado_at` datetime DEFAULT NULL
+  `fecha_eliminacion` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `contratos`
 --
 
-INSERT INTO `contratos` (`id`, `inmueble_id`, `inquilino_id`, `fecha_inicio`, `fecha_fin_original`, `fecha_fin_efectiva`, `monto_mensual`, `estado`, `creado_por`, `creado_at`, `finalizado_por`, `finalizado_at`) VALUES
-(12, 14, 25, '2025-10-01', '2027-09-01', NULL, 120000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(13, 15, 26, '2025-11-01', '2027-10-01', NULL, 135000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(14, 16, 27, '2025-12-01', '2027-11-01', NULL, 110000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(15, 17, 28, '2026-01-01', '2027-12-01', NULL, 140000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(16, 18, 29, '2026-02-01', '2028-01-01', NULL, 125000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(17, 19, 30, '2026-03-01', '2028-02-01', NULL, 150000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(18, 20, 31, '2026-04-01', '2028-03-01', NULL, 115000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(19, 21, 32, '2026-05-01', '2028-04-01', NULL, 160000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL),
-(20, 22, 33, '2026-06-01', '2028-05-01', '2025-09-23', 130000.00, 'RESCINDIDO', 1, '2025-09-22 15:35:46', 1, '2025-09-23 13:07:13'),
-(21, 23, 34, '2026-07-01', '2028-06-01', NULL, 145000.00, 'VIGENTE', 1, '2025-09-22 15:35:46', NULL, NULL);
+INSERT INTO `contratos` (`id`, `inmueble_id`, `inquilino_id`, `fecha_inicio`, `fecha_fin_original`, `fecha_fin_efectiva`, `monto_mensual`, `creado_por`, `creado_at`, `finalizado_por`, `fecha_eliminacion`) VALUES
+(12, 14, 25, '2025-10-01', '2027-09-01', NULL, 120000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(13, 15, 26, '2025-11-01', '2027-10-01', NULL, 135000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(14, 16, 27, '2025-12-01', '2027-11-01', NULL, 110000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(15, 17, 28, '2026-01-01', '2027-12-01', NULL, 140000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(16, 18, 29, '2026-02-01', '2028-01-01', NULL, 125000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(17, 19, 30, '2026-03-01', '2028-02-01', NULL, 150000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(18, 20, 31, '2026-04-01', '2028-03-01', NULL, 115000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(19, 21, 32, '2026-05-01', '2028-04-01', NULL, 160000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(20, 22, 33, '2026-06-01', '2028-05-01', '2025-09-23', 130000.00, 1, '2025-09-22 15:35:46', 1, NULL),
+(21, 23, 34, '2026-07-01', '2028-06-01', NULL, 145000.00, 1, '2025-09-22 15:35:46', NULL, NULL),
+(31, 14, 25, '2021-10-01', '2023-09-01', NULL, 120000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(32, 15, 26, '2021-11-01', '2023-10-01', NULL, 135000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(33, 16, 27, '2021-12-01', '2023-11-01', NULL, 110000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(34, 17, 28, '2022-01-01', '2023-12-01', NULL, 140000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(35, 18, 29, '2022-02-01', '2024-01-01', NULL, 125000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(36, 19, 30, '2022-03-01', '2024-02-01', NULL, 150000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(37, 20, 31, '2022-04-01', '2024-03-01', NULL, 115000.00, 1, '2021-09-22 15:35:46', NULL, NULL),
+(38, 21, 32, '2022-05-01', '2024-04-01', NULL, 160000.00, 1, '2021-09-22 15:35:46', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -299,7 +306,6 @@ ALTER TABLE `contratos`
   ADD KEY `fk_contratos_finalizado_por` (`finalizado_por`),
   ADD KEY `ix_contratos_inmueble` (`inmueble_id`),
   ADD KEY `ix_contratos_inquilino` (`inquilino_id`),
-  ADD KEY `ix_contratos_estado` (`estado`),
   ADD KEY `ix_contratos_fechas` (`fecha_inicio`,`fecha_fin_original`),
   ADD KEY `ix_contratos_creado_por` (`creado_por`);
 
@@ -375,7 +381,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT for table `contratos`
 --
 ALTER TABLE `contratos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `imagenes`
@@ -436,8 +442,7 @@ ALTER TABLE `contratos`
   ADD CONSTRAINT `fk_contratos_creado_por` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_contratos_finalizado_por` FOREIGN KEY (`finalizado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_contratos_inmueble` FOREIGN KEY (`inmueble_id`) REFERENCES `inmuebles` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_contratos_inquilino` FOREIGN KEY (`inquilino_id`) REFERENCES `inquilinos` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_contratos_renovado_de` FOREIGN KEY (`renovado_de_id`) REFERENCES `contratos` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_contratos_inquilino` FOREIGN KEY (`inquilino_id`) REFERENCES `inquilinos` (`id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `imagenes`

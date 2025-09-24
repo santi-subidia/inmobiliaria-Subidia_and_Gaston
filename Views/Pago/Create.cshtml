@@ -100,13 +100,13 @@
                     <tr>
                         <td><strong>Estado:</strong></td>
                         <td>
-                            @if(contrato?.Estado == Inmobiliaria.Models.EstadoContrato.VIGENTE)
+                            @if(contrato?.Estado() == "VIGENTE")
                             {
-                                <span class="badge bg-success">@contrato.Estado</span>
+                                <span class="badge bg-success">@contrato.Estado()</span>
                             }
                             else
                             {
-                                <span class="badge bg-secondary">@contrato?.Estado</span>
+                                <span class="badge bg-secondary">@contrato?.Estado()</span>
                             }
                         </td>
                     </tr>

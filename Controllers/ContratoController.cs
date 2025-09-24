@@ -22,7 +22,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Contrato
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, EstadoContrato? estado = null, 
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string? estado = null, 
             long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, 
             DateOnly? fechaHasta = null, int? proximosVencer = null)
         {
@@ -125,7 +125,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Contrato/Create
-        public async Task<IActionResult> Create()
+        public IActionResult Create()
         {
             PrepareViewBagsAsync();
             return View();
@@ -294,7 +294,7 @@ namespace Inmobiliaria.Controllers
             // }
             // ViewBag.InmuebleId = new SelectList(inmuebles, "Id", "Direccion");
 
-            ViewBag.Estado = new SelectList(Enum.GetValues<EstadoContrato>());
+
         }
 
         // GET: Contrato/VigentesPorFecha

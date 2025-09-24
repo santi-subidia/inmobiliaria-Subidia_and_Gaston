@@ -76,11 +76,11 @@
                     </div>
                     <div class="col-md-6">
                         <strong>Estado:</strong> 
-                        <span class="badge @(contrato.Estado == EstadoContrato.VIGENTE ? "bg-success" : 
-                                           contrato.Estado == EstadoContrato.FINALIZADO ? "bg-secondary" : "bg-danger")">
-                            @contrato.Estado
+                        <span class="badge @(contrato.Estado() == "VIGENTE" ? "bg-success" : 
+                                           contrato.Estado() == "FINALIZADO" ? "bg-secondary" : "bg-danger")">
+                            @contrato.Estado()
                         </span>
-                        @if (contrato.Estado == EstadoContrato.RESCINDIDO)
+                        @if (contrato.Estado() == "RESCINDIDO")
                         {
                             <div class="mt-2">
                                 <strong>Multa por Rescisión:</strong> <span class="text-danger">@contrato.MontoMulta.ToString("C")</span>
@@ -108,7 +108,7 @@
                                     <strong class="text-primary">@totalContrato.ToString("C")</strong>
                                 </div>
                             </div>
-                            @if (contrato.Estado == EstadoContrato.RESCINDIDO && contrato.MontoMulta > 0)
+                            @if (contrato.Estado() == "RESCINDIDO" && contrato.MontoMulta > 0)
                             {
                                 <div class="col-md-3">
                                     <div class="text-center p-2 bg-danger bg-opacity-10 rounded">
@@ -133,7 +133,7 @@
                             </div>
                         </div>
                         
-                        @if (contrato.Estado == EstadoContrato.RESCINDIDO)
+                        @if (contrato.Estado() == "RESCINDIDO")
                         {
                             <div class="row mt-2">
                                 <div class="col-md-12">

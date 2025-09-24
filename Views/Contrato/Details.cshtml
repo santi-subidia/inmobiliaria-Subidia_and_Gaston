@@ -11,9 +11,9 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-file-text"></i> Información del Contrato
-                    <span class="badge @(Model.Estado == EstadoContrato.VIGENTE ? "bg-success" : 
-                                       Model.Estado == EstadoContrato.FINALIZADO ? "bg-secondary" : "bg-danger") ms-2">
-                        @Model.Estado.ToString()
+                    <span class="badge @(Model.Estado() == "VIGENTE" ? "bg-success" : 
+                                       Model.Estado() == "FINALIZADO" ? "bg-secondary" : "bg-danger") ms-2">
+                        @Model.Estado()
                     </span>
                 </h5>
             </div>
@@ -70,17 +70,17 @@
 
                     <dt class="col-sm-4">Estado del Contrato</dt>
                     <dd class="col-sm-8">
-                        @if (Model.EstaVigente)
+                        @if (Model.Estado() == "VIGENTE")
                         {
                             <span class="badge bg-success">Vigente y Activo</span>
                         }
-                        else if (Model.Estado == EstadoContrato.VIGENTE)
+                        else if (Model.Estado() == "VIGENTE")
                         {
                             <span class="badge bg-warning">Vigente pero fuera de fechas</span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary">@Model.Estado</span>
+                            <span class="badge bg-secondary">@Model.Estado()</span>
                         }
                     </dd>
                 </dl>
@@ -101,11 +101,8 @@
                     <dt class="col-sm-6">Creado por</dt>
                     <dd class="col-sm-6">Usuario #@Model.CreadoPor</dd>
 
-                    @if (Model.FinalizadoAt.HasValue)
+                    @if (Model.FinalizadoPor.HasValue)
                     {
-                        <dt class="col-sm-6">Finalizado</dt>
-                        <dd class="col-sm-6">@Model.FinalizadoAt.Value.ToString("dd/MM/yyyy HH:mm")</dd>
-
                         <dt class="col-sm-6">Finalizado por</dt>
                         <dd class="col-sm-6">Usuario #@Model.FinalizadoPor</dd>
                     }
@@ -120,7 +117,7 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    @if (Model.Estado == EstadoContrato.VIGENTE)
+                    @if (Model.Estado() == "VIGENTE")
                     {
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
                             <i class="bi bi-pencil"></i> Editar

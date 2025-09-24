@@ -11,6 +11,11 @@ namespace Inmobiliaria.Repositories
     {
         private readonly IMySqlConnectionFactory _connectionFactory;
 
+        private const string VigenteSQL = "CURDATE() < c.fecha_fin_original AND c.fecha_fin_efectiva IS NULL";
+        private const string FinalizadoSQL = "CURDATE() > c.fecha_fin_original AND c.fecha_fin_efectiva IS NULL";
+        private const string RescindidoSQL = "c.fecha_fin_efectiva IS NOT NULL AND c.fecha_fin_efectiva < c.fecha_fin_original";
+        private const string NoEliminadoSQL = "c.fecha_eliminacion IS NULL";
+
         public ContratoRepository(IMySqlConnectionFactory connectionFactory)
         {
             _connectionFactory = connectionFactory;
@@ -22,10 +27,11 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT c.*, i.dni, i.apellido, i.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos i ON c.inquilino_id = i.id
+                WHERE {NoEliminadoSQL}
                 ORDER BY c.creado_at DESC";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -37,7 +43,7 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, EstadoContrato? estado = null)
+        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? tipoEstado = null, bool noEliminado = true)
         {
             var list = new List<Contrato>();
 
@@ -45,13 +51,27 @@ namespace Inmobiliaria.Repositories
             await conn.OpenAsync();
 
             // Construir WHERE dinámicamente
-            var whereClause = estado.HasValue ? "WHERE c.estado = @estado" : "";
+            var whereClause = "";
 
-            // SQL con paginado y filtros
+            if (!string.IsNullOrEmpty(tipoEstado)) {
+                if (tipoEstado.ToUpper() == "VIGENTE") {
+                    whereClause = $"AND {VigenteSQL}";
+                } else if (tipoEstado.ToUpper() == "FINALIZADO") {
+                    whereClause = $"AND {FinalizadoSQL}";
+                } else if (tipoEstado.ToUpper() == "RESCINDIDO") {
+                    whereClause = $"AND {RescindidoSQL}";
+                }
+            }
+
+            if (noEliminado) {
+                whereClause += $" AND {NoEliminadoSQL}";
+            }
+
             string sql = $@"
                 SELECT SQL_CALC_FOUND_ROWS c.*, i.dni, i.apellido, i.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos i ON c.inquilino_id = i.id
+                WHERE 1=1
                 {whereClause}
                 ORDER BY c.creado_at DESC
                 LIMIT @pageSize OFFSET @offset;
@@ -60,9 +80,6 @@ namespace Inmobiliaria.Repositories
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@pageSize", pageSize);
             cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
-            
-            if (estado.HasValue)
-                cmd.Parameters.AddWithValue("@estado", estado.Value.ToString());
 
             using var reader = await cmd.ExecuteReaderAsync();
 
@@ -131,11 +148,11 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT c.*, i.dni, i.apellido, i.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE c.estado = 'VIGENTE'
+                WHERE {VigenteSQL}
                 AND c.fecha_inicio <= @fechaHasta
                 AND c.fecha_fin_original >= @fechaDesde
                 ORDER BY c.fecha_inicio ASC";
@@ -174,21 +191,20 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        public async Task<IEnumerable<Contrato>> GetByEstadoAsync(EstadoContrato estado)
+        public async Task<IEnumerable<Contrato>> GetVigentesAsync()
         {
             var list = new List<Contrato>();
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT c.*, i.dni, i.apellido, i.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE c.estado = @estado
+                WHERE {VigenteSQL} AND {NoEliminadoSQL}
                 ORDER BY c.fecha_inicio DESC";
                 
             var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@estado", estado.ToString());
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -197,9 +213,48 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        public async Task<IEnumerable<Contrato>> GetVigentesAsync()
+        public async Task<IEnumerable<Contrato>> GetFinalizadosAsync()
         {
-            return await GetByEstadoAsync(EstadoContrato.VIGENTE);
+            var list = new List<Contrato>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            
+            string sql = $@"
+                SELECT c.*, i.dni, i.apellido, i.nombre 
+                FROM contratos c 
+                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
+                WHERE {FinalizadoSQL} AND {NoEliminadoSQL}
+                ORDER BY c.fecha_inicio DESC";
+                
+            var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapContrato(reader));
+            }
+            return list;
+        }
+
+        public async Task<IEnumerable<Contrato>> GetRescindidosAsync()
+        {
+            var list = new List<Contrato>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            
+            string sql = $@"
+                SELECT c.*, i.dni, i.apellido, i.nombre 
+                FROM contratos c 
+                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
+                WHERE {RescindidoSQL} AND {NoEliminadoSQL}
+                ORDER BY c.fecha_inicio DESC";
+                
+            var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapContrato(reader));
+            }
+            return list;
         }
 
         public async Task<IEnumerable<Contrato>> GetProximosAVencerAsync(int dias = 30)
@@ -208,11 +263,11 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT c.*, i.dni, i.apellido, i.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE c.estado = 'VIGENTE' 
+                WHERE {VigenteSQL} AND {NoEliminadoSQL}
                 AND COALESCE(c.fecha_fin_efectiva, c.fecha_fin_original) <= DATE_ADD(CURDATE(), INTERVAL @dias DAY)
                 AND COALESCE(c.fecha_fin_efectiva, c.fecha_fin_original) >= CURDATE()
                 ORDER BY COALESCE(c.fecha_fin_efectiva, c.fecha_fin_original) ASC";
@@ -232,11 +287,11 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT c.*, i.dni, i.apellido, i.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE c.inmueble_id = @inmuebleId AND c.estado = 'VIGENTE'
+                WHERE c.inmueble_id = @inmuebleId AND {VigenteSQL} AND {NoEliminadoSQL}
                 LIMIT 1";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -253,10 +308,8 @@ namespace Inmobiliaria.Repositories
             await conn.OpenAsync();
             
             string sql = @"
-                INSERT INTO contratos (inmueble_id, inquilino_id, fecha_inicio, fecha_fin_original, 
-                    fecha_fin_efectiva, monto_mensual, estado, creado_por, creado_at, finalizado_por, finalizado_at)
-                VALUES (@inmueble_id, @inquilino_id, @fecha_inicio, @fecha_fin_original, 
-                    @fecha_fin_efectiva, @monto_mensual, @estado, @creado_por, @creado_at, @finalizado_por, @finalizado_at);
+                INSERT INTO contratos (inmueble_id, inquilino_id, fecha_inicio, fecha_fin_original, monto_mensual, creado_por, creado_at)
+                VALUES (@inmueble_id, @inquilino_id, @fecha_inicio, @fecha_fin_original, @monto_mensual, @creado_por, @creado_at);
                 SELECT LAST_INSERT_ID();";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -264,13 +317,9 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@inquilino_id", contrato.InquilinoId);
             cmd.Parameters.AddWithValue("@fecha_inicio", contrato.FechaInicio.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@fecha_fin_original", contrato.FechaFinOriginal.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", contrato.FechaFinEfectiva?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
-            cmd.Parameters.AddWithValue("@estado", contrato.Estado.ToString());
             cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor ?? 1);
             cmd.Parameters.AddWithValue("@creado_at", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@finalizado_por", contrato.FinalizadoPor ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@finalizado_at", contrato.FinalizadoAt ?? (object)DBNull.Value);
 
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt64(result);
@@ -285,8 +334,7 @@ namespace Inmobiliaria.Repositories
                 UPDATE contratos 
                 SET inmueble_id = @inmueble_id, inquilino_id = @inquilino_id, 
                     fecha_inicio = @fecha_inicio, fecha_fin_original = @fecha_fin_original,
-                    fecha_fin_efectiva = @fecha_fin_efectiva, monto_mensual = @monto_mensual,
-                    estado = @estado
+                    fecha_fin_efectiva = @fecha_fin_efectiva, monto_mensual = @monto_mensual
                 WHERE id = @id";
                 
             var cmd = new MySqlCommand(sql, conn);
@@ -297,7 +345,6 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@fecha_fin_original", contrato.FechaFinOriginal.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@fecha_fin_efectiva", contrato.FechaFinEfectiva?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
-            cmd.Parameters.AddWithValue("@estado", contrato.Estado.ToString());
             
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -305,9 +352,21 @@ namespace Inmobiliaria.Repositories
 
         public async Task<bool> DeleteAsync(long id)
         {
-            // En este caso, eliminar un contrato podría ser peligroso
-            // Se recomienda cambiar el estado a RESCINDIDO en su lugar
-            return await RescindirContratoAsync(id, 1); // Asumiendo usuario sistema = 1
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            
+            // Eliminación lógica usando fecha_eliminacion
+            string sql = @"
+                UPDATE contratos 
+                SET fecha_eliminacion = @fecha_eliminacion
+                WHERE id = @id AND fecha_eliminacion IS NULL";
+                
+            var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@fecha_eliminacion", DateTime.UtcNow);
+            
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
         }
 
         public async Task<bool> FinalizarContratoAsync(long id, long finalizadoPor, DateTime? fechaFinEfectiva = null)
@@ -315,18 +374,16 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            // Solo verificamos que esté vigente usando la lógica de fechas y actualizamos las fechas
+            string sql = $@"
                 UPDATE contratos 
-                SET estado = 'FINALIZADO', 
-                    finalizado_por = @finalizado_por, 
-                    finalizado_at = @finalizado_at,
+                SET finalizado_por = @finalizado_por,
                     fecha_fin_efectiva = COALESCE(@fecha_fin_efectiva, fecha_fin_efectiva, CURDATE())
-                WHERE id = @id AND estado = 'VIGENTE'";
+                WHERE id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.Parameters.AddWithValue("@finalizado_por", finalizadoPor);
-            cmd.Parameters.AddWithValue("@finalizado_at", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"));
             
             var rows = await cmd.ExecuteNonQueryAsync();
@@ -338,18 +395,17 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            // Para rescisión, establecemos fecha_fin_efectiva anterior a fecha_fin_original
+            string sql = $@"
                 UPDATE contratos 
-                SET estado = 'RESCINDIDO', 
-                    finalizado_por = @finalizado_por, 
-                    finalizado_at = @finalizado_at,
-                    fecha_fin_efectiva = COALESCE(@fecha_fin_efectiva, CURDATE())
-                WHERE id = @id AND estado = 'VIGENTE'";
+                SET finalizado_por = @finalizado_por,
+                    fecha_fin_efectiva = @fecha_fin_efectiva
+                WHERE id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.Parameters.AddWithValue("@finalizado_por", finalizadoPor);
-            cmd.Parameters.AddWithValue("@finalizado_at", DateTime.UtcNow);
+            // Para rescisión usamos la fecha proporcionada o hoy si es anterior a la original
             cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"));
             
             var rows = await cmd.ExecuteNonQueryAsync();
@@ -361,9 +417,9 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT COUNT(*) FROM contratos 
-                WHERE inmueble_id = @inmuebleId AND estado = 'VIGENTE'";
+                WHERE inmueble_id = @inmuebleId AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@inmuebleId", inmuebleId);
@@ -377,9 +433,9 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT COUNT(*) FROM contratos 
-                WHERE inquilino_id = @inquilinoId AND estado = 'VIGENTE'";
+                WHERE inquilino_id = @inquilinoId AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@inquilinoId", inquilinoId);
@@ -388,7 +444,7 @@ namespace Inmobiliaria.Repositories
             return Convert.ToInt32(count) > 0;
         }
 
-        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedWithFiltersAsync(int page, int pageSize, EstadoContrato? estado = null, long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, DateOnly? fechaHasta = null)
+        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedWithFiltersAsync(int page, int pageSize, string? tipoEstado = null, long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, DateOnly? fechaHasta = null)
         {
             var list = new List<Contrato>();
 
@@ -399,10 +455,23 @@ namespace Inmobiliaria.Repositories
             var whereConditions = new List<string>();
             var parameters = new List<MySqlParameter>();
 
-            if (estado.HasValue)
+            // Siempre excluimos eliminados
+            whereConditions.Add(NoEliminadoSQL);
+
+            if (!string.IsNullOrEmpty(tipoEstado))
             {
-                whereConditions.Add("c.estado = @estado");
-                parameters.Add(new MySqlParameter("@estado", estado.ToString()));
+                if (tipoEstado.ToUpper() == "VIGENTE")
+                {
+                    whereConditions.Add(VigenteSQL);
+                }
+                else if (tipoEstado.ToUpper() == "FINALIZADO")
+                {
+                    whereConditions.Add(FinalizadoSQL);
+                }
+                else if (tipoEstado.ToUpper() == "RESCINDIDO")
+                {
+                    whereConditions.Add(RescindidoSQL);
+                }
             }
 
             if (propietarioId.HasValue)
@@ -467,11 +536,11 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            string sql = @"
+            string sql = $@"
                 SELECT c.*, inq.dni, inq.apellido, inq.nombre 
                 FROM contratos c 
                 LEFT JOIN inquilinos inq ON c.inquilino_id = inq.id
-                WHERE c.estado = 'VIGENTE' 
+                WHERE {VigenteSQL} AND {NoEliminadoSQL}
                 AND c.fecha_fin_original BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL @dias DAY)
                 ORDER BY c.fecha_fin_original ASC";
                 
@@ -497,11 +566,10 @@ namespace Inmobiliaria.Repositories
                 FechaFinOriginal = DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_original")),
                 FechaFinEfectiva = reader.IsDBNull(reader.GetOrdinal("fecha_fin_efectiva")) ? null : DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_efectiva")),
                 MontoMensual = reader.GetDecimal("monto_mensual"),
-                Estado = Enum.Parse<EstadoContrato>(reader.GetString("estado")),
                 CreadoPor = reader.IsDBNull(reader.GetOrdinal("creado_por")) ? null : reader.GetInt64("creado_por"),
                 CreadoAt = reader.GetDateTime("creado_at"),
                 FinalizadoPor = reader.IsDBNull(reader.GetOrdinal("finalizado_por")) ? null : reader.GetInt64("finalizado_por"),
-                FinalizadoAt = reader.IsDBNull(reader.GetOrdinal("finalizado_at")) ? null : reader.GetDateTime("finalizado_at")
+                FechaEliminacion = reader.IsDBNull(reader.GetOrdinal("fecha_eliminacion")) ? null : reader.GetDateTime("fecha_eliminacion")
             };
                 if (!reader.IsDBNull(reader.GetOrdinal("inquilino_id")))
                 {

@@ -75,10 +75,10 @@
         </div>
         <div class="col-md-6">
             <div class="mb-3">
-                <label asp-for="Estado" class="form-label"></label>
-                <select asp-for="Estado" class="form-select" asp-items="ViewBag.Estado">
-                </select>
-                <span asp-validation-for="Estado" class="text-danger"></span>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Estado:</strong> Se calculará automáticamente basado en las fechas del contrato.
+                </div>
             </div>
         </div>
     </div>

@@ -103,7 +103,7 @@ namespace Inmobiliaria.Repositories
             if (suspendido)
                 sql += " AND suspendido = 1";
             if (disponible)
-                sql += " AND (contratos.finalizado_at IS NOT NULL OR contratos.id IS NULL)";
+                sql += " AND (contratos.fecha_fin_efectiva IS NOT NULL OR contratos.id IS NULL OR CURDATE() > contratos.fecha_fin_original)";
 
             using var cmd = new MySqlCommand(sql, conn);
             using var reader = await cmd.ExecuteReaderAsync();
@@ -128,7 +128,8 @@ namespace Inmobiliaria.Repositories
                                     AND i.id NOT IN (
                                         SELECT c.inmueble_id
                                         FROM contratos c
-                                        WHERE c.estado = 'VIGENTE'
+                                        WHERE (CURDATE() < c.fecha_fin_original AND c.fecha_fin_efectiva IS NULL)
+                                        AND c.fecha_eliminacion IS NULL
                                         AND c.fecha_inicio <= @fechaFin
                                         AND c.fecha_fin_original >= @fechaInicio";
 

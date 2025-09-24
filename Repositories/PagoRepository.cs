@@ -185,7 +185,7 @@ namespace Inmobiliaria.Repositories
 
             const string sql = @"
                 SELECT p.*, c.inquilino_id, c.inmueble_id, c.fecha_inicio, c.fecha_fin_original, 
-                       c.fecha_fin_efectiva, c.monto_mensual, c.estado as contrato_estado
+                       c.fecha_fin_efectiva, c.monto_mensual
                 FROM pagos p
                 LEFT JOIN contratos c ON p.contrato_id = c.id
                 WHERE p.contrato_id = @contrato_id

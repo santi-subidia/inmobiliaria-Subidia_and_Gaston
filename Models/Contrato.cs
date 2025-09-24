@@ -37,9 +37,22 @@ namespace Inmobiliaria.Models
         [Range(0.01, double.MaxValue, ErrorMessage = "El monto mensual debe ser mayor a 0")]
         public decimal MontoMensual { get; set; }
 
-        [Required(ErrorMessage = "El estado es obligatorio")]
         [Display(Name = "Estado")]
-        public EstadoContrato Estado { get; set; } = EstadoContrato.VIGENTE;
+        public String Estado()
+        {
+            if (FechaFinEfectiva.HasValue && FechaFinEfectiva < FechaFinOriginal)
+            {
+                return "RESCINDIDO";
+            }
+            else if (FechaFinOriginal < DateOnly.FromDateTime(DateTime.Now))
+            {
+                return "FINALIZADO";
+            }
+            else
+            {
+                return "VIGENTE";
+            }
+        }
 
         //[Required(ErrorMessage = "El creador es obligatorio")]
         [Display(Name = "Creado por")]
@@ -53,19 +66,14 @@ namespace Inmobiliaria.Models
         [Display(Name = "Finalizado por")]
         public long? FinalizadoPor { get; set; }
 
-        [Display(Name = "Fecha de Finalización")]
+        [Display(Name = "Fecha de Eliminación")]
         [DataType(DataType.DateTime)]
-        public DateTime? FinalizadoAt { get; set; }
+        public DateTime? FechaEliminacion { get; set; }
 
         public Inquilino? Inquilino { get; set; }
         public Inmueble? Inmueble { get; set; }
         //public Usuario? Creador { get; set; }
         //public Usuario? Finalizador { get; set; }
-
-        // Métodos de utilidad
-        public bool EstaVigente => Estado == EstadoContrato.VIGENTE &&
-                                  FechaInicio <= DateOnly.FromDateTime(DateTime.Now) &&
-                                  (FechaFinEfectiva ?? FechaFinOriginal) >= DateOnly.FromDateTime(DateTime.Now);
 
         public int DuracionEnMeses (DateOnly fechaPost) =>
             ((fechaPost.Year - FechaInicio.Year) * 12) +
@@ -76,6 +84,10 @@ namespace Inmobiliaria.Models
         public decimal MontoMulta => FechaFinEfectiva.HasValue && FechaFinEfectiva < FechaFinOriginal
             ? MontoMensual * multipliciadMulta()
             : 0;
+
+        public bool PuedeFinalizarse => Estado() == "VIGENTE" && FechaEliminacion == null;
+
+        public bool PuedeRescindirse => Estado() == "VIGENTE" && FechaEliminacion == null;
 
         private int multipliciadMulta()
         {
@@ -89,23 +101,5 @@ namespace Inmobiliaria.Models
 
             }
         }
-
-        public bool PuedeFinalizarse => Estado == EstadoContrato.VIGENTE;
-
-        public bool PuedeRescindirse => Estado == EstadoContrato.VIGENTE;
-        
-
-    }
-
-    public enum EstadoContrato
-    {
-        [Display(Name = "Vigente")]
-        VIGENTE,
-        
-        [Display(Name = "Finalizado")]
-        FINALIZADO,
-        
-        [Display(Name = "Rescindido")]
-        RESCINDIDO
     }
 }

@@ -227,8 +227,8 @@
         <tbody>
             @foreach (var contrato in Model.Items)
             {
-                <tr class="@(contrato.Estado == EstadoContrato.VIGENTE ? "table-success" : 
-                            contrato.Estado == EstadoContrato.FINALIZADO ? "table-secondary" : "table-danger")">
+                <tr class="@(contrato.Estado() == "VIGENTE" ? "table-success" : 
+                            contrato.Estado() == "FINALIZADO" ? "table-secondary" : "table-danger")">
                     <td>@contrato.Id</td>
                     <td>
                         @if (contrato.Inquilino != null)
@@ -273,22 +273,22 @@
                     </td>
                     <td>@contrato.MontoMensual.ToString("C")</td>
                     <td>
-                        <span class="badge @(contrato.Estado == EstadoContrato.VIGENTE ? "bg-success" : 
-                                           contrato.Estado == EstadoContrato.FINALIZADO ? "bg-secondary" : "bg-danger")">
-                            @contrato.Estado.ToString()
+                        <span class="badge @(contrato.Estado() == "VIGENTE" ? "bg-success" : 
+                                           contrato.Estado() == "FINALIZADO" ? "bg-secondary" : "bg-danger")">
+                            @contrato.Estado()
                         </span>
                     </td>
                     <td class="text-end">
                         <div class="btn-group" role="group">
                             <a asp-action="Details" asp-route-id="@contrato.Id" class="btn btn-outline-secondary btn-sm">Ver</a>
-                            @if (contrato.Estado == EstadoContrato.VIGENTE)
+                            @if (contrato.Estado() == "VIGENTE")
                             {
                                 <a asp-action="Edit" asp-route-id="@contrato.Id" class="btn btn-outline-primary btn-sm">Editar</a>
                                 <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
                                 <a asp-action="Finalizar" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Finalizar</a>
                                 <a asp-action="Rescindir" asp-route-id="@contrato.Id" class="btn btn-outline-danger btn-sm">Rescindir</a>
                             }
-                            else if (contrato.Estado == EstadoContrato.FINALIZADO || contrato.Estado == EstadoContrato.RESCINDIDO)
+                            else if (contrato.Estado() == "FINALIZADO" || contrato.Estado() == "RESCINDIDO")
                             {
                                 <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
                                 <span class="btn btn-sm btn-outline-secondary disabled">Finalizado</span>
