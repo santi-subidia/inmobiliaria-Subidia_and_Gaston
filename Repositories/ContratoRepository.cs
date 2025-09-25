@@ -350,21 +350,21 @@ namespace Inmobiliaria.Repositories
             return rows > 0;
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(long idContrato, long idUsuario)
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             
-            // Eliminación lógica usando fecha_eliminacion
             string sql = @"
                 UPDATE contratos 
-                SET fecha_eliminacion = @fecha_eliminacion
+                SET fecha_eliminacion = @fecha_eliminacion, eliminado_por = @eliminado_por
                 WHERE id = @id AND fecha_eliminacion IS NULL";
-                
+
             var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@id", idContrato);
             cmd.Parameters.AddWithValue("@fecha_eliminacion", DateTime.UtcNow);
-            
+            cmd.Parameters.AddWithValue("@eliminado_por", idUsuario);
+
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
         }
@@ -376,10 +376,10 @@ namespace Inmobiliaria.Repositories
             
             // Solo verificamos que esté vigente usando la lógica de fechas y actualizamos las fechas
             string sql = $@"
-                UPDATE contratos 
-                SET finalizado_por = @finalizado_por,
-                    fecha_fin_efectiva = COALESCE(@fecha_fin_efectiva, fecha_fin_efectiva, CURDATE())
-                WHERE id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
+                UPDATE contratos c
+                SET c.finalizado_por = @finalizado_por,
+                    c.fecha_fin_efectiva = COALESCE(@fecha_fin_efectiva, c.fecha_fin_efectiva, CURDATE())
+                WHERE c.id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
@@ -397,10 +397,10 @@ namespace Inmobiliaria.Repositories
             
             // Para rescisión, establecemos fecha_fin_efectiva anterior a fecha_fin_original
             string sql = $@"
-                UPDATE contratos 
-                SET finalizado_por = @finalizado_por,
-                    fecha_fin_efectiva = @fecha_fin_efectiva
-                WHERE id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
+                UPDATE contratos c
+                SET c.finalizado_por = @finalizado_por,
+                    c.fecha_fin_efectiva = @fecha_fin_efectiva
+                WHERE c.id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
@@ -418,8 +418,8 @@ namespace Inmobiliaria.Repositories
             await conn.OpenAsync();
             
             string sql = $@"
-                SELECT COUNT(*) FROM contratos 
-                WHERE inmueble_id = @inmuebleId AND {VigenteSQL} AND {NoEliminadoSQL}";
+                SELECT COUNT(*) FROM contratos c
+                WHERE c.inmueble_id = @inmuebleId AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@inmuebleId", inmuebleId);
@@ -434,8 +434,8 @@ namespace Inmobiliaria.Repositories
             await conn.OpenAsync();
             
             string sql = $@"
-                SELECT COUNT(*) FROM contratos 
-                WHERE inquilino_id = @inquilinoId AND {VigenteSQL} AND {NoEliminadoSQL}";
+                SELECT COUNT(*) FROM contratos c
+                WHERE c.inquilino_id = @inquilinoId AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@inquilinoId", inquilinoId);

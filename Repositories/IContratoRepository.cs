@@ -4,8 +4,13 @@ using Inmobiliaria.Models;
 
 namespace Inmobiliaria.Repositories
 {
-    public interface IContratoRepository : IBaseRepository<Contrato>
+    public interface IContratoRepository
     {
+        Task<IEnumerable<Contrato>> GetAllAsync();
+        Task<Contrato?> GetByIdAsync(long id);
+        Task<bool> DeleteAsync(long idContrato, long idUsuario);
+        Task<long> CreateAsync(Contrato contrato);
+        Task<bool> UpdateAsync(Contrato contrato);
         Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? tipoEstado = null, bool noEliminado = true);
         Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedWithFiltersAsync(int page, int pageSize, string? tipoEstado = null, long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, DateOnly? fechaHasta = null);
         Task<IEnumerable<Contrato>> GetVigentesEnRangoAsync(DateOnly fechaDesde, DateOnly fechaHasta);
