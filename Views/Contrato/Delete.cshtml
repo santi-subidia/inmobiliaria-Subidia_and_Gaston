@@ -1,0 +1,131 @@
+@model Inmobiliaria.Models.Contrato
+@{
+    ViewData["Title"] = "Eliminar Contrato";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-trash"></i> @ViewData["Title"]</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Contratos</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">Contrato #@Model.Id</a></li>
+                            <li class="breadcrumb-item active">Eliminar</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <strong>¿Está seguro que desea eliminar este contrato?</strong>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-file-text"></i> Información del Contrato</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Contrato ID:</dt>
+                        <dd class="col-sm-9">#@Model.Id</dd>
+
+                        <dt class="col-sm-3">Inquilino:</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.Inquilino != null)
+                            {
+                                <div>
+                                    <strong>@Model.Inquilino.Nombre @Model.Inquilino.Apellido</strong><br>
+                                    <small class="text-muted">DNI: @Model.Inquilino.Dni</small>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">ID: @Model.InquilinoId</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-3">Inmueble:</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.Inmueble != null)
+                            {
+                                <div>
+                                    <strong>@Model.Inmueble.Direccion</strong><br>
+                                    <small class="text-muted">ID: @Model.InmuebleId</small>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">ID: @Model.InmuebleId</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-3">Período:</dt>
+                        <dd class="col-sm-9">
+                            <strong>@Model.FechaInicio.ToString("dd/MM/yyyy")</strong> - <strong>@Model.FechaFinOriginal.ToString("dd/MM/yyyy")</strong>
+                            @if (Model.FechaFinEfectiva.HasValue)
+                            {
+                                <br><small class="text-muted">Finalizado: @Model.FechaFinEfectiva.Value.ToString("dd/MM/yyyy")</small>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-3">Monto Mensual:</dt>
+                        <dd class="col-sm-9">
+                            <strong>@Model.MontoMensual.ToString("C")</strong>
+                        </dd>
+
+                        <dt class="col-sm-3">Estado Actual:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge @(Model.Estado() == "VIGENTE" ? "bg-success" : Model.Estado() == "FINALIZADO" ? "bg-secondary" : "bg-danger")">
+                                @Model.Estado()
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-3">Fecha de Creación:</dt>
+                        <dd class="col-sm-9">
+                            @Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-info-circle"></i>
+                <strong>Información:</strong> Esta acción realizará un borrado lógico del contrato. 
+                El contrato no se eliminará físicamente de la base de datos, sino que se marcará como eliminado.
+            </div>
+
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-circle"></i>
+                <strong>Atención:</strong> Una vez eliminado, el contrato no aparecerá en las listas principales 
+                y no podrá ser modificado sin restaurarlo desde el sistema de administración.
+            </div>
+
+            <form method="post" asp-action="Delete" asp-route-id="@Model.Id">
+                @Html.AntiForgeryToken()
+                
+                <!-- Campo oculto para el ID del usuario que realiza la eliminación -->
+                <input type="hidden" name="idUsuario" value="1" />
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver a Lista
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Confirmar Eliminación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

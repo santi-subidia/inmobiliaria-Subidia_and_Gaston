@@ -185,13 +185,12 @@ namespace Inmobiliaria.Controllers
             return View(contrato);
         }
 
-        // POST: Contrato/Delete/5 (Rescisión)
+        // POST: Contrato/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(long id)
+        public async Task<IActionResult> DeleteConfirmed(long id, long idUsuario)
         {
-            // En lugar de eliminar, rescindimos el contrato
-            await _repo.RescindirContratoAsync(id, 1); // Usuario temporalmente hardcodeado
+            await _repo.DeleteAsync(id, idUsuario);
             return RedirectToAction(nameof(Index));
         }
 
@@ -360,6 +359,136 @@ namespace Inmobiliaria.Controllers
             ViewBag.DiasSeleccionados = dias;
             ViewData["Title"] = $"Contratos que Vencen en {dias} días";
             return View("ProximosVencer", contratos);
+        }
+
+        // GET: Contrato/Renovar/5
+        public async Task<IActionResult> Renovar(long id)
+        {
+            var contratoAnterior = await _repo.GetByIdAsync(id);
+            if (contratoAnterior == null)
+            {
+                TempData["Error"] = "Contrato no encontrado.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Verificar que el contrato esté finalizado o rescindido
+            if (contratoAnterior.Estado() == "VIGENTE")
+            {
+                TempData["Error"] = "No se puede renovar un contrato vigente. Debe finalizar o rescindir primero.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Cargar datos del inmueble e inquilino
+            contratoAnterior.Inmueble = await _inmuebleRepo.GetByIdAsync(contratoAnterior.InmuebleId);
+            contratoAnterior.Inquilino = await _inquilinoRepo.GetByIdAsync(contratoAnterior.InquilinoId);
+            
+            if (contratoAnterior.Inmueble?.PropietarioId != null)
+            {
+                contratoAnterior.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contratoAnterior.Inmueble.PropietarioId);
+            }
+
+            // Obtener contratos existentes para mostrar ocupación
+            var contratosExistentes = await _repo.GetByInmuebleIdAsync(contratoAnterior.InmuebleId);
+            var contratosVigentes = contratosExistentes.Where(c => c.Estado() == "VIGENTE").ToList();
+
+            // Crear el nuevo contrato con datos predeterminados
+            var nuevoContrato = new Contrato
+            {
+                InmuebleId = contratoAnterior.InmuebleId,
+                InquilinoId = contratoAnterior.InquilinoId,
+                MontoMensual = contratoAnterior.MontoMensual * 1.1m, // Aumento del 10% por defecto
+                FechaInicio = contratoAnterior.FechaFinEfectiva?.AddDays(1) ?? contratoAnterior.FechaFinOriginal.AddDays(1),
+                FechaFinOriginal = (contratoAnterior.FechaFinEfectiva?.AddDays(1) ?? contratoAnterior.FechaFinOriginal.AddDays(1)).AddYears(1),
+                Inmueble = contratoAnterior.Inmueble,
+                Inquilino = contratoAnterior.Inquilino
+            };
+
+            ViewBag.ContratoAnterior = contratoAnterior;
+            ViewBag.ContratosVigentes = contratosVigentes;
+            ViewBag.MontoAnterior = contratoAnterior.MontoMensual;
+            ViewBag.PorcentajeAumento = 10; // Por defecto 10%
+
+            return View(nuevoContrato);
+        }
+
+        // POST: Contrato/Renovar
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Renovar(Contrato nuevoContrato, long contratoAnteriorId)
+        {
+            try
+            {
+                // Verificar que no haya conflictos de fechas con otros contratos
+                var inmuebleDisponible = await VerificarDisponibilidadInmueble(nuevoContrato.InmuebleId, 
+                    nuevoContrato.FechaInicio, nuevoContrato.FechaFinOriginal, null);
+
+                if (!inmuebleDisponible)
+                {
+                    TempData["Error"] = "El inmueble no está disponible en las fechas seleccionadas.";
+                    return await Renovar(contratoAnteriorId);
+                }
+
+                // Establecer datos adicionales
+                nuevoContrato.CreadoPor = 1; // TODO: Usar usuario actual
+                nuevoContrato.CreadoAt = DateTime.UtcNow;
+
+                var id = await _repo.CreateAsync(nuevoContrato);
+                
+                TempData["Success"] = $"Contrato renovado exitosamente. Nuevo contrato ID: {id}";
+                return RedirectToAction(nameof(Details), new { id = id });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al renovar el contrato: {ex.Message}";
+                return await Renovar(contratoAnteriorId);
+            }
+        }
+
+        // Método auxiliar para verificar disponibilidad
+        private async Task<bool> VerificarDisponibilidadInmueble(long inmuebleId, DateOnly fechaInicio, DateOnly fechaFin, long? excepto = null)
+        {
+            var contratos = await _repo.GetByInmuebleIdAsync(inmuebleId);
+            
+            foreach (var contrato in contratos)
+            {
+                if (excepto.HasValue && contrato.Id == excepto.Value)
+                    continue;
+
+                // Solo verificar contratos vigentes o que se superpongan en fechas
+                if (contrato.Estado() == "VIGENTE")
+                {
+                    var finEfectiva = contrato.FechaFinEfectiva ?? contrato.FechaFinOriginal;
+                    
+                    // Verificar superposición de fechas
+                    if (!(fechaFin < contrato.FechaInicio || fechaInicio > finEfectiva))
+                    {
+                        return false; // Hay conflicto
+                    }
+                }
+            }
+            
+            return true; // Sin conflictos
+        }
+
+        // GET: Verificar disponibilidad para renovación
+        public async Task<IActionResult> VerificarDisponibilidadRenovacion(long inmuebleId, DateOnly fechaInicio, DateOnly fechaFin)
+        {
+            try
+            {
+                var disponible = await VerificarDisponibilidadInmueble(inmuebleId, fechaInicio, fechaFin);
+                
+                return Json(new { 
+                    disponible = disponible,
+                    mensaje = disponible ? "Inmueble disponible para las fechas seleccionadas" : "El inmueble no está disponible en ese período"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { 
+                    disponible = false, 
+                    mensaje = $"Error al verificar disponibilidad: {ex.Message}" 
+                });
+            }
         }
     }
 }

@@ -1,0 +1,469 @@
+@model Inmobiliaria.Models.Contrato
+
+@{
+    ViewData["Title"] = "Renovar Contrato";
+    var contratoAnterior = ViewBag.ContratoAnterior as Inmobiliaria.Models.Contrato;
+    var contratosVigentes = ViewBag.ContratosVigentes as List<Inmobiliaria.Models.Contrato>;
+    var montoAnterior = (decimal)ViewBag.MontoAnterior;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-arrow-repeat"></i> Renovar Contrato</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Contratos</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@contratoAnterior?.Id">Contrato #@contratoAnterior?.Id</a></li>
+                            <li class="breadcrumb-item active">Renovar</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Panel Izquierdo: Información del Contrato Anterior -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-text"></i> Contrato Anterior</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-4">ID:</dt>
+                        <dd class="col-8">#@contratoAnterior?.Id</dd>
+                        
+                        <dt class="col-4">Estado:</dt>
+                        <dd class="col-8">
+                            <span class="badge @(contratoAnterior?.Estado() == "FINALIZADO" ? "bg-secondary" : "bg-danger")">
+                                @contratoAnterior?.Estado()
+                            </span>
+                        </dd>
+                        
+                        <dt class="col-4">Período:</dt>
+                        <dd class="col-8">
+                            @contratoAnterior?.FechaInicio.ToString("dd/MM/yyyy") - 
+                            @contratoAnterior?.FechaFinOriginal.ToString("dd/MM/yyyy")
+                            @if (contratoAnterior?.FechaFinEfectiva.HasValue == true)
+                            {
+                                <br><small class="text-muted">Finalizado: @contratoAnterior.FechaFinEfectiva.Value.ToString("dd/MM/yyyy")</small>
+                            }
+                        </dd>
+                        
+                        <dt class="col-4">Monto:</dt>
+                        <dd class="col-8">
+                            <strong>@montoAnterior.ToString("C")</strong>
+                        </dd>
+                    </dl>
+
+                    <hr>
+
+                    <h6><i class="bi bi-house"></i> Inmueble</h6>
+                    <p class="mb-2">
+                        <strong>@Model.Inmueble?.Direccion</strong><br>
+                        <small class="text-muted">
+                            Propietario: @Model.Inmueble?.Propietario?.NombreCompleto
+                        </small>
+                    </p>
+
+                    <h6><i class="bi bi-person"></i> Inquilino</h6>
+                    <p class="mb-0">
+                        <strong>@Model.Inquilino?.Nombre @Model.Inquilino?.Apellido</strong><br>
+                        <small class="text-muted">DNI: @Model.Inquilino?.Dni</small>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Panel de Ocupación del Inmueble -->
+            @if (contratosVigentes?.Any() == true)
+            {
+                <div class="card mt-3">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="bi bi-calendar-x"></i> Períodos Ocupados</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">Este inmueble tiene los siguientes períodos ocupados:</p>
+                        @foreach (var contrato in contratosVigentes)
+                        {
+                            <div class="alert alert-warning py-2 small">
+                                <i class="bi bi-calendar-event"></i>
+                                @contrato.FechaInicio.ToString("dd/MM/yyyy") - 
+                                @contrato.FechaFinOriginal.ToString("dd/MM/yyyy")
+                                <br><small>Contrato #@contrato.Id</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Panel Derecho: Formulario de Renovación -->
+        <div class="col-lg-8">
+            <!-- Formulario inicial para seleccionar fechas y monto -->
+            <div class="card" id="formFechas">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-plus"></i> Configurar Renovación</h5>
+                </div>
+                <div class="card-body">
+                    <form id="fechasForm" autocomplete="off" onsubmit="return verificarRenovacion(event)">
+                        
+                        <!-- Fechas y duración -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="fechaInicio" class="form-label">
+                                    <i class="bi bi-calendar-plus"></i> Fecha de Inicio
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" 
+                                       min="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                <div id="fechaError" class="text-danger"></div>
+                                <div class="form-text">
+                                    Se sugiere: @((contratoAnterior?.FechaFinEfectiva?.AddDays(1) ?? contratoAnterior?.FechaFinOriginal.AddDays(1))?.ToString("dd/MM/yyyy"))
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="cantidadMeses" class="form-label">
+                                    <i class="bi bi-calendar-range"></i> Cantidad de Meses
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" id="cantidadMeses" name="cantidadMeses" class="form-control" 
+                                       min="1" max="48" value="12" required />
+                                <div id="cantidadMesesError" class="text-danger"></div>
+                                <div class="form-text">
+                                    Fecha fin calculada: <span id="fechaFinCalculada">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Monto -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-calculator"></i> Calculadora de Monto
+                                </label>
+                                <div class="card bg-light">
+                                    <div class="card-body py-3">
+                                        <div class="row g-2">
+                                            <div class="col-8">
+                                                <label class="form-label small">% de Aumento:</label>
+                                                <input type="number" id="porcentajeAumento" class="form-control form-control-sm" 
+                                                       value="10" min="0" max="100" step="0.1" />
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label small">&nbsp;</label>
+                                                <button type="button" class="btn btn-outline-primary btn-sm w-100" 
+                                                        onclick="calcularNuevoMonto()">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Monto anterior: <strong>@montoAnterior.ToString("C")</strong>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="montoMensual" class="form-label">
+                                    <i class="bi bi-currency-dollar"></i> Monto Mensual Nuevo
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="montoMensual" name="montoMensual" class="form-control" 
+                                           step="0.01" min="1" value="@(montoAnterior * 1.1m)" required />
+                                </div>
+                                <div class="form-text">
+                                    <span id="aumentoInfo">+@((montoAnterior * 0.1m).ToString("C")) (+10.0%)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen -->
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle"></i> Resumen</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>Duración:</strong><br>
+                                    <span id="resumenDuracion">12 meses</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Monto Total:</strong><br>
+                                    <span id="resumenTotal">--</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Aumento:</strong><br>
+                                    <span id="resumenAumento">10.0%</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Diferencia:</strong><br>
+                                    <span id="resumenDiferencia">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fechaMensaje" class="text-info mb-3"></div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Verificar Disponibilidad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Formulario final para crear el contrato (oculto inicialmente) -->
+            <div class="card" id="formCrear" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Confirmar Renovación</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Renovar" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="contratoAnteriorId" value="@contratoAnterior?.Id" />
+                        <input type="hidden" asp-for="InmuebleId" />
+                        <input type="hidden" asp-for="InquilinoId" />
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="FechaInicio" class="form-label">Fecha de Inicio</label>
+                                <input id="fechaInicio2" type="date" asp-for="FechaInicio" class="form-control" readonly />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="FechaFinOriginal" class="form-label">Fecha de Fin</label>
+                                <input id="fechaFin2" type="date" asp-for="FechaFinOriginal" class="form-control" readonly />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="MontoMensual" class="form-label">Monto Mensual</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input id="montoMensual2" asp-for="MontoMensual" class="form-control" readonly />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> 
+                            <strong>¡Inmueble disponible!</strong> 
+                            Puede proceder con la renovación del contrato.
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-secondary" onclick="volverAFechas()">
+                                <i class="bi bi-arrow-left"></i> Modificar
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Renovar Contrato
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const montoAnterior = @montoAnterior;
+        const inmuebleId = @Model.InmuebleId;
+        
+        // Calcular nuevo monto basado en porcentaje
+        function calcularNuevoMonto() {
+            const porcentaje = parseFloat(document.getElementById('porcentajeAumento').value) || 0;
+            const nuevoMonto = montoAnterior * (1 + porcentaje / 100);
+            document.getElementById('montoMensual').value = nuevoMonto.toFixed(2);
+            actualizarInfo();
+        }
+
+        // Actualizar información de aumento y resumen
+        function actualizarInfo() {
+            const nuevoMonto = parseFloat(document.getElementById('montoMensual').value) || 0;
+            const diferencia = nuevoMonto - montoAnterior;
+            const porcentaje = montoAnterior > 0 ? ((diferencia / montoAnterior) * 100) : 0;
+            
+            // Actualizar info de aumento
+            const aumentoInfo = document.getElementById('aumentoInfo');
+            if (diferencia > 0) {
+                aumentoInfo.innerHTML = `<span class="text-success">+$${diferencia.toFixed(2)} (+${porcentaje.toFixed(1)}%)</span>`;
+            } else if (diferencia < 0) {
+                aumentoInfo.innerHTML = `<span class="text-danger">$${diferencia.toFixed(2)} (${porcentaje.toFixed(1)}%)</span>`;
+            } else {
+                aumentoInfo.innerHTML = '<span class="text-muted">Sin cambios</span>';
+            }
+
+            // Actualizar resumen
+            actualizarResumen();
+        }
+
+        // Calcular duración del contrato
+        function calcularDuracion() {
+            const meses = parseInt(document.getElementById('cantidadMeses').value) || 0;
+            document.getElementById('resumenDuracion').textContent = `${meses} meses`;
+            return meses;
+        }
+
+        // Actualizar resumen completo
+        function actualizarResumen() {
+            const meses = calcularDuracion();
+            const montoMensual = parseFloat(document.getElementById('montoMensual').value) || 0;
+            const total = meses * montoMensual;
+            const diferencia = montoMensual - montoAnterior;
+            const porcentaje = montoAnterior > 0 ? ((diferencia / montoAnterior) * 100) : 0;
+
+            document.getElementById('resumenTotal').textContent = `$${total.toLocaleString()}`;
+            document.getElementById('resumenAumento').textContent = `${porcentaje.toFixed(1)}%`;
+            document.getElementById('resumenDiferencia').textContent = `$${diferencia.toFixed(2)}`;
+        }
+
+        // Agregar meses a una fecha
+        function agregarMeses(fecha, meses) {
+            const nuevaFecha = new Date(fecha);
+            nuevaFecha.setMonth(nuevaFecha.getMonth() + meses);
+            return nuevaFecha;
+        }
+
+        // Actualizar fecha fin calculada
+        function actualizarFechaFin() {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const cantidadMeses = parseInt(document.getElementById('cantidadMeses').value) || 0;
+            
+            if (fechaInicio && cantidadMeses > 0) {
+                const fechaInicioDate = new Date(fechaInicio);
+                const fechaFinDate = agregarMeses(fechaInicioDate, cantidadMeses);
+                const fechaFinString = fechaFinDate.toLocaleDateString('es-AR');
+                document.getElementById('fechaFinCalculada').textContent = fechaFinString;
+            } else {
+                document.getElementById('fechaFinCalculada').textContent = '--';
+            }
+        }
+
+        // Verificar renovación
+        async function verificarRenovacion(event) {
+            event.preventDefault();
+
+            const fechaInicioInput = document.getElementById('fechaInicio');
+            const cantidadMesesInput = document.getElementById('cantidadMeses');
+            const montoInput = document.getElementById('montoMensual');
+
+            const fechaErrorDiv = document.getElementById('fechaError');
+            const cantidadMesesErrorDiv = document.getElementById('cantidadMesesError');
+            const fechaMensajeDiv = document.getElementById('fechaMensaje');
+
+            // Limpiar mensajes previos
+            fechaErrorDiv.innerText = '';
+            cantidadMesesErrorDiv.innerText = '';
+            fechaMensajeDiv.innerText = '';
+
+            // Validaciones
+            if (cantidadMesesInput.value.trim() === '') {
+                cantidadMesesErrorDiv.innerText = 'La cantidad de meses es obligatoria.';
+                return false;
+            } else if (isNaN(cantidadMesesInput.value) || parseInt(cantidadMesesInput.value) <= 0) {
+                cantidadMesesErrorDiv.innerText = 'La cantidad de meses debe ser un número positivo.';
+                return false;
+            } else if (parseInt(cantidadMesesInput.value) > 48) {
+                cantidadMesesErrorDiv.innerText = 'La cantidad no puede superar los 4 años.';
+                return false;
+            }
+
+            const fechaInicio = new Date(fechaInicioInput.value);
+            const fechaFin = agregarMeses(fechaInicio, parseInt(cantidadMesesInput.value));
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            let valid = true;
+
+            if (isNaN(fechaInicio.getTime())) {
+                fechaErrorDiv.innerText = 'Fecha de inicio inválida.';
+                valid = false;
+            } else if (fechaInicio < hoy) {
+                fechaErrorDiv.innerText = 'La fecha de inicio no puede ser en el pasado.';
+                valid = false;
+            }
+
+            if (valid) {
+                try {
+                    fechaMensajeDiv.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando disponibilidad...';
+                    
+                    const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+                    const fechaFinStr = fechaFin.toISOString().split('T')[0];
+                    
+                    const response = await fetch(`/Contrato/VerificarDisponibilidadRenovacion?inmuebleId=${inmuebleId}&fechaInicio=${fechaInicioStr}&fechaFin=${fechaFinStr}`);
+                    const resultado = await response.json();
+
+                    if (resultado.disponible) {
+                        // Llenar el formulario de confirmación
+                        document.getElementById('fechaInicio2').value = fechaInicioStr;
+                        document.getElementById('fechaFin2').value = fechaFinStr;
+                        document.getElementById('montoMensual2').value = montoInput.value;
+                        
+                        // Mostrar formulario de confirmación y ocultar el de fechas
+                        document.getElementById('formCrear').style.display = '';
+                        document.getElementById('formFechas').style.display = 'none';
+                    } else {
+                        fechaMensajeDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> ${resultado.mensaje}</div>`;
+                    }
+                } catch (error) {
+                    fechaMensajeDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Error al verificar disponibilidad: ${error.message}</div>`;
+                }
+            }
+
+            return false;
+        }
+
+        // Volver al formulario de fechas
+        function volverAFechas() {
+            document.getElementById('formCrear').style.display = 'none';
+            document.getElementById('formFechas').style.display = '';
+            document.getElementById('fechaMensaje').innerHTML = '';
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Actualizar cálculos cuando cambien los valores
+            document.getElementById('cantidadMeses').addEventListener('change', function() {
+                actualizarFechaFin();
+                actualizarResumen();
+            });
+            
+            document.getElementById('fechaInicio').addEventListener('change', actualizarFechaFin);
+            document.getElementById('montoMensual').addEventListener('input', actualizarInfo);
+            
+            document.getElementById('porcentajeAumento').addEventListener('input', function() {
+                if (this.value !== '') {
+                    calcularNuevoMonto();
+                }
+            });
+
+            // Calcular inicial
+            actualizarFechaFin();
+            actualizarResumen();
+        });
+    </script>
+}

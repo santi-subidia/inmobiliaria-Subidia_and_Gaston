@@ -136,37 +136,6 @@
                             <li><a class="dropdown-item" href="@Url.Action("Index", new { proximosVencer = 90 })">En 90 días</a></li>
                         </ul>
                     </div>
-
-                    <!-- Filtros de fecha rápidos -->
-                    <div class="btn-group me-3" role="group">
-                        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
-                            <i class="fas fa-calendar"></i> Periodos
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="@Url.Action("Index", new { 
-                                estado = "VIGENTE",
-                                fechaDesde = DateOnly.FromDateTime(DateTime.Now.AddDays(-7)), 
-                                fechaHasta = DateOnly.FromDateTime(DateTime.Now) 
-                            })">Última semana</a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", new { 
-                                estado = "VIGENTE",
-                                fechaDesde = DateOnly.FromDateTime(DateTime.Now.AddDays(-30)), 
-                                fechaHasta = DateOnly.FromDateTime(DateTime.Now) 
-                            })">Último mes</a></li>
-                            <li><a class="dropdown-item" href="@Url.Action("Index", new { 
-                                estado = "VIGENTE",
-                                fechaDesde = DateOnly.FromDateTime(DateTime.Now.AddDays(-90)), 
-                                fechaHasta = DateOnly.FromDateTime(DateTime.Now) 
-                            })">Últimos 3 meses</a></li>
-                        </ul>
-                    </div>
-
-                    <!-- Solo vigentes -->
-                    <div class="btn-group" role="group">
-                        <a href="@Url.Action("Index", new { estado = "VIGENTE" })" class="btn btn-outline-success">
-                            <i class="fas fa-check"></i> Solo Vigentes
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>
@@ -285,14 +254,14 @@
                             {
                                 <a asp-action="Edit" asp-route-id="@contrato.Id" class="btn btn-outline-primary btn-sm">Editar</a>
                                 <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
-                                <a asp-action="Finalizar" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Finalizar</a>
                                 <a asp-action="Rescindir" asp-route-id="@contrato.Id" class="btn btn-outline-danger btn-sm">Rescindir</a>
                             }
                             else if (contrato.Estado() == "FINALIZADO" || contrato.Estado() == "RESCINDIDO")
                             {
                                 <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
-                                <span class="btn btn-sm btn-outline-secondary disabled">Finalizado</span>
+                                <a asp-action="Renovar" asp-route-id="@contrato.Id" class="btn btn-outline-primary btn-sm">Renovar</a>
                             }
+                            <a asp-action="Delete" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Eliminar</a>
                         </div>
                     </td>
                 </tr>
