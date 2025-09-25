@@ -1,0 +1,24 @@
+@model Inmobiliaria.Models.Usuario
+@{
+    ViewData["Title"] = "Editar Usuario";
+}
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Edit" method="post" class="card card-body">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <!-- mismos campos que Create -->
+    <!-- ... -->
+    <div class="mb-3">
+        <label class="form-label">Nueva contraseña (opcional)</label>
+        <input name="newPassword" type="password" class="form-control" />
+        <div class="form-text">Dejar vacío para no cambiar.</div>
+    </div>
+
+    <div class="mt-3">
+        <button class="btn btn-primary">Guardar</button>
+        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+    </div>
+</form>

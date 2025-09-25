@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var isAuth = User?.Identity?.IsAuthenticated == true;
+    var displayName = User?.FindFirst("full_name")?.Value ?? User?.Identity?.Name ?? "Usuario";
+}
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -13,42 +17,89 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container">
-                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">Sistema de Gestión Inmobiliaria</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">
+                    Sistema de Gestión Inmobiliaria
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="collapse navbar-collapse" id="navbarNav">
+                    <!-- Menú izquierda -->
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        @if (isAuth)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Propietario" asp-action="Index">Propietarios</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Inquilino" asp-action="Index">Inquilinos</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Inmueble" asp-action="Index">Inmuebles</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Contrato" asp-action="Index">Contratos</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Pago" asp-action="Index">Pagos</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Usuario" asp-action="Index">Usuarios</a>
+                            </li>
+                        }
+                    </ul>
+
+                    <!-- Menú derecha (auth) -->
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Propietario" asp-action="Index">Propietarios</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Inquilino" asp-action="Index">Inquilinos</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Inmueble" asp-action="Index">Inmuebles</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Contrato" asp-action="Index">Contratos</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Pago" asp-action="Index">Pagos</a>
-                        </li>
+                        @if (isAuth)
+                        {
+                            <li class="nav-item d-flex align-items-center me-2">
+                                <span class="navbar-text">
+                                    <i class="bi bi-person-circle me-1"></i> Hola, @displayName
+                                </span>
+                            </li>
+                            <li class="nav-item">
+                                <form asp-controller="Auth" asp-action="Logout" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-link nav-link">
+                                        <i class="bi bi-box-arrow-right me-1"></i> Salir
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Auth" asp-action="Login">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Auth" asp-action="Register">
+                                    <i class="bi bi-person-plus me-1"></i> Registrarse
+                                </a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
+
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
+
     <footer class="py-4 border-top bg-white">
         <div class="container text-center text-secondary small">
-        © <span id="year"></span> Sistema de Gestión Inmobiliaria
+            © <span id="year"></span> Sistema de Gestión Inmobiliaria
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

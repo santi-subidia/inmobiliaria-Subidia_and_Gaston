@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "Iniciar sesión";
+    var returnUrl = ViewBag.ReturnUrl as string;
+}
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Login" method="post" asp-route-returnUrl="@returnUrl" class="card card-body">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input name="email" type="email" class="form-control" required />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Contraseña</label>
+        <input name="password" type="password" class="form-control" required />
+    </div>
+
+    <button class="btn btn-primary">Ingresar</button>
+</form>
