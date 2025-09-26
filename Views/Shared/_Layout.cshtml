@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/custom-inmobiliaria.css" asp-append-version="true" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 </head>
 <body>
     <header>
@@ -28,8 +29,8 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <!-- Menú izquierda -->
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        @if (isAuth)
-                        {
+                        @* @if (isAuth) *@
+                        @* { *@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Propietario" asp-action="Index">Propietarios</a>
                             </li>
@@ -48,11 +49,11 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Usuario" asp-action="Index">Usuarios</a>
                             </li>
-                        }
+                        @* } *@
                     </ul>
 
                     <!-- Menú derecha (auth) -->
-                    <ul class="navbar-nav ms-auto">
+                    @* <ul class="navbar-nav ms-auto">
                         @if (isAuth)
                         {
                             <li class="nav-item d-flex align-items-center me-2">
@@ -82,7 +83,7 @@
                                 </a>
                             </li>
                         }
-                    </ul>
+                    </ul> *@
                 </div>
             </div>
         </nav>

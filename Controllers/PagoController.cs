@@ -1,3 +1,4 @@
+using System.Reflection.Metadata.Ecma335;
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -27,8 +28,17 @@ namespace Inmobiliaria.Controllers
             ViewBag.ContratosIndex = contratos.Select(c => new SelectListItem
             {
                 Value = c.Id.ToString(),
-                Text = $"Contrato #{c.Id}"
+                Text = $"Contrato #{c.Id} - {(c.Inquilino?.NombreCompleto ?? "Sin inquilino")}"
             }).ToList();
+
+            // Estadísticas generales
+            var totalRecaudado = await _repo.GetTotalRecaudadoAsync();
+            var pagosEstesMes = await _repo.GetPagosDelMesAsync(DateTime.Now.Year, DateTime.Now.Month);
+            var contratosActivosCount = contratos.Count(c => c.Estado() == "VIGENTE");
+
+            ViewBag.TotalRecaudado = totalRecaudado;
+            ViewBag.PagosEstesMes = pagosEstesMes;
+            ViewBag.ContratosActivos = contratosActivosCount;
 
             var model = new PagedResult<Pago>
             {
@@ -221,41 +231,6 @@ namespace Inmobiliaria.Controllers
             return View(pago);
         }
 
-        // GET: Pagos/Delete/5
-        // En pagos, Delete = Anular (soft delete)
-        public async Task<IActionResult> Delete(long id)
-        {
-            var pago = await _repo.GetByIdAsync(id);
-            if (pago == null) return NotFound();
-            return View(pago);
-        }
-
-        // // POST: Pagos/Delete/5  (Anulación)
-        // [HttpPost, ActionName("Delete")]
-        // [ValidateAntiForgeryToken]
-        // public async Task<IActionResult> DeleteConfirmed(long id)
-        // {
-        //     var ok = await _repo.AnularAsync(id, 1);
-        //     if (!ok) return NotFound();
-
-        //     TempData["Msg"] = $"Pago #{id} anulado correctamente.";
-        //     return RedirectToAction(nameof(Index));
-        // }
-
-        // Utilidad: carga combo de contratos
-        private async Task CargarContratosAsync(int? contratoSeleccionado = null)
-        {
-            var contratos = await _contratoRepo.GetAllAsync();
-            ViewBag.Contratos = contratos
-                .Select(c => new SelectListItem
-                {
-                    Value = c.Id.ToString(),
-                    Text = $"Contrato #{c.Id}",
-                    Selected = contratoSeleccionado.HasValue && c.Id == contratoSeleccionado.Value
-                })
-                .ToList();
-        }
-
         // GET: Pago/IndexByContrato/5
         public async Task<IActionResult> IndexByContrato(long id)
         {
@@ -277,10 +252,18 @@ namespace Inmobiliaria.Controllers
             return View(pagos);
         }
 
-        // POST: Pago/AnularPago/5
+        public async Task<IActionResult> Delete(long id)
+        {
+            var pago = await _repo.GetByIdAsync(id);
+            if (pago == null) return NotFound();
+
+            return View(pago);
+        }
+
+        // POST: Pago/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AnularPago(int id, int contratoId)
+        public async Task<IActionResult> Delete(int id, int? ContratoId)
         {
             try
             {
@@ -288,17 +271,36 @@ namespace Inmobiliaria.Controllers
                 if (pago == null)
                 {
                     TempData["Error"] = "Pago no encontrado.";
-                    return RedirectToAction("IndexByContrato", new { id = contratoId });
+                    if (ContratoId.HasValue)
+                    {
+                        return RedirectToAction("IndexByContrato", new { id = ContratoId }); 
+
+                    }
+                    return RedirectToAction("Index");
                 }
 
                 if (pago.Estado == "Anulado")
                 {
                     TempData["Warning"] = "El pago ya está anulado.";
-                    return RedirectToAction("IndexByContrato", new { id = contratoId });
+                    if (ContratoId.HasValue)
+                    {
+                        return RedirectToAction("IndexByContrato", new { id = ContratoId }); 
+
+                    }
+                    return RedirectToAction("Index");
                 }
 
-                // Cambiar estado a anulado
-                var ok = await _repo.UpdateEstadoAsync(id, "Anulado");
+                if (pago.Estado == "Anulado")
+                {
+                    TempData["Warning"] = "El pago ya está anulado.";
+                    if (ContratoId.HasValue)
+                    {
+                        return RedirectToAction("IndexByContrato", new { id = ContratoId });
+                    }
+                    return RedirectToAction("Index");
+                }
+
+                var ok = await _repo.AnularAsync(id, 1);
                 if (ok)
                 {
                     TempData["Success"] = "Pago anulado correctamente.";
@@ -313,7 +315,11 @@ namespace Inmobiliaria.Controllers
                 TempData["Error"] = $"Error al anular el pago: {ex.Message}";
             }
 
-            return RedirectToAction("IndexByContrato", new { id = contratoId });
+            if (ContratoId.HasValue)
+            {
+                return RedirectToAction("IndexByContrato", new { id = ContratoId });
+            }
+            return RedirectToAction("Index");
         }
     }
 }

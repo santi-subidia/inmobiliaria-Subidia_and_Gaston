@@ -33,19 +33,27 @@ namespace Inmobiliaria.Repositories
             await conn.OpenAsync();
 
             // Total
-            string sqlCount = "SELECT COUNT(*) FROM pagos";
-            if (contratoId.HasValue) sqlCount += " WHERE contrato_id = @contrato_id";
+            string sqlCount = "SELECT COUNT(*) FROM pagos p";
+            if (contratoId.HasValue) sqlCount += " WHERE p.contrato_id = @contrato_id";
 
             using var cmdCount = new MySqlCommand(sqlCount, conn);
             if (contratoId.HasValue) cmdCount.Parameters.AddWithValue("@contrato_id", contratoId.Value);
 
             var total = Convert.ToInt32(await cmdCount.ExecuteScalarAsync());
 
-            // Page
-            string sql = @"SELECT *
-                           FROM pagos";
-            if (contratoId.HasValue) sql += " WHERE contrato_id = @contrato_id";
-            sql += @" ORDER BY fecha_pago DESC, id DESC
+            string sql = @"SELECT p.*, 
+                                  c.inquilino_id, c.inmueble_id, c.fecha_inicio, c.fecha_fin_original, 
+                                  c.fecha_fin_efectiva, c.monto_mensual,
+                                  inq.nombre as inquilino_nombre, inq.apellido as inquilino_apellido,
+                                  inm.direccion as inmueble_direccion
+                           FROM pagos p
+                           LEFT JOIN contratos c ON p.contrato_id = c.id
+                           LEFT JOIN inquilinos inq ON c.inquilino_id = inq.id
+                           LEFT JOIN inmuebles inm ON c.inmueble_id = inm.id
+                           WHERE c.fecha_eliminacion IS NULL";
+
+            if (contratoId.HasValue) sql += " AND p.contrato_id = @contrato_id";
+            sql += @" ORDER BY p.fecha_pago DESC, p.id DESC
                      LIMIT @limit OFFSET @offset";
 
             using var cmd = new MySqlCommand(sql, conn);
@@ -55,7 +63,46 @@ namespace Inmobiliaria.Repositories
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
-                items.Add(MapPago(reader));
+            {
+                var pago = MapPago(reader);
+                
+                if (!reader.IsDBNull(reader.GetOrdinal("inquilino_id")))
+                {
+                    pago.Contrato = new Contrato
+                    {
+                        Id = pago.ContratoId,
+                        InquilinoId = reader.GetInt64("inquilino_id"),
+                        InmuebleId = reader.GetInt64("inmueble_id"),
+                        FechaInicio = DateOnly.FromDateTime(reader.GetDateTime("fecha_inicio")),
+                        FechaFinOriginal = DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_original")),
+                        FechaFinEfectiva = reader.IsDBNull(reader.GetOrdinal("fecha_fin_efectiva")) ? null : DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_efectiva")),
+                        MontoMensual = reader.GetDecimal("monto_mensual")
+                    };
+
+                    // Map inquilino info if available
+                    if (!reader.IsDBNull(reader.GetOrdinal("inquilino_nombre")))
+                    {
+                        pago.Contrato.Inquilino = new Inquilino
+                        {
+                            Id = (int)reader.GetInt64("inquilino_id"),
+                            Nombre = reader.GetString("inquilino_nombre"),
+                            Apellido = reader.GetString("inquilino_apellido")
+                        };
+                    }
+
+                    // Map inmueble info if available
+                    if (!reader.IsDBNull(reader.GetOrdinal("inmueble_direccion")))
+                    {
+                        pago.Contrato.Inmueble = new Inmueble
+                        {
+                            Id = (int)reader.GetInt64("inmueble_id"),
+                            Direccion = reader.GetString("inmueble_direccion")
+                        };
+                    }
+                }
+                
+                items.Add(pago);
+            }
 
             return (items, total);
         }
@@ -138,16 +185,16 @@ namespace Inmobiliaria.Repositories
         /// <summary>
         /// Soft delete: setea estado='Anulado', anulado_por y anulado_at=UTC.
         /// </summary>
-        public async Task<bool> AnularAsync(long id, string anuladoPor)
+        public async Task<bool> AnularAsync(long id, long anuladoPor)
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
 
             const string sql = @"
             UPDATE pagos SET
-            estado      = 'Anulado',
-            anulado_por = @anulado_por,
-            anulado_at  = @anulado_at
+                estado      = 'Anulado',
+                anulado_por = @anulado_por,
+                anulado_at  = @anulado_at
             WHERE id = @id;";
 
             using var cmd = new MySqlCommand(sql, conn);
@@ -183,12 +230,12 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
 
-            const string sql = @"
+            const string sql = $@"
                 SELECT p.*, c.inquilino_id, c.inmueble_id, c.fecha_inicio, c.fecha_fin_original, 
                        c.fecha_fin_efectiva, c.monto_mensual
                 FROM pagos p
                 LEFT JOIN contratos c ON p.contrato_id = c.id
-                WHERE p.contrato_id = @contrato_id
+                WHERE p.contrato_id = @contrato_id AND c.fecha_eliminacion IS NULL
                 ORDER BY p.numero_pago ASC";
 
             using var cmd = new MySqlCommand(sql, conn);
@@ -215,28 +262,6 @@ namespace Inmobiliaria.Repositories
             }
 
             return list;
-        }
-
-        public async Task<bool> UpdateEstadoAsync(long id, string estado)
-        {
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-
-            const string sql = @"
-                UPDATE pagos 
-                SET estado = @estado,
-                    anulado_at = @anulado_at,
-                    anulado_por = @anulado_por
-                WHERE id = @id";
-
-            using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@id", id);
-            cmd.Parameters.AddWithValue("@estado", estado);
-            cmd.Parameters.AddWithValue("@anulado_at", estado == "Anulado" ? DateTime.UtcNow : (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@anulado_por", estado == "Anulado" ? 1 : (object)DBNull.Value);
-
-            var rows = await cmd.ExecuteNonQueryAsync();
-            return rows > 0;
         }
 
         public async Task<(int cantidadPagos, decimal montoPagado)> GetMontoPagadoAndCantidadPagosByContratoAsync(long contratoId)
@@ -284,6 +309,53 @@ namespace Inmobiliaria.Repositories
             if (await reader.ReadAsync())
             {
                 return reader.GetInt32("cantidad_pagos");
+            }
+
+            return 0;
+        }
+
+        public async Task<decimal> GetTotalRecaudadoAsync()
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"
+                SELECT COALESCE(SUM(importe), 0) as total_recaudado
+                FROM pagos 
+                WHERE estado = 'Pagado'";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+            
+            if (await reader.ReadAsync())
+            {
+                return reader.GetDecimal("total_recaudado");
+            }
+
+            return 0;
+        }
+
+        public async Task<int> GetPagosDelMesAsync(int year, int month)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+
+            const string sql = @"
+                SELECT COUNT(*) as pagos_mes
+                FROM pagos 
+                WHERE estado = 'Pagado' 
+                AND YEAR(fecha_pago) = @year 
+                AND MONTH(fecha_pago) = @month";
+
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@year", year);
+            cmd.Parameters.AddWithValue("@month", month);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            
+            if (await reader.ReadAsync())
+            {
+                return reader.GetInt32("pagos_mes");
             }
 
             return 0;

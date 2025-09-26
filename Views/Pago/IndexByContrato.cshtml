@@ -207,20 +207,14 @@
                                             <a asp-action="Details" asp-route-id="@pago.Id" class="btn btn-outline-secondary btn-sm">
                                                 <i class="fas fa-eye"></i> Ver
                                             </a>
-                                            @if (pago.Estado != "ANULADO")
+                                            @if (pago.Estado != "Anulado")
                                             {
                                                 <a asp-action="Edit" asp-route-id="@pago.Id" class="btn btn-outline-primary btn-sm">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
-                                                <form asp-action="AnularPago" method="post" class="d-inline" 
-                                                      onsubmit="return confirm('¿Está seguro de anular este pago?')">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="id" value="@pago.Id" />
-                                                    <input type="hidden" name="contratoId" value="@contratoId" />
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                        <i class="fas fa-ban"></i> Anular
-                                                    </button>
-                                                </form>
+                                                <a asp-action="Delete" asp-route-id="@pago.Id" class="btn btn-outline-danger btn-sm" title="Anular">
+                                                    <i class="fas fa-ban"></i> Anular
+                                                </a>
                                             }
                                             else
                                             {
