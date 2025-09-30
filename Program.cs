@@ -9,10 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 // 🔗 Cadena de conexión (definida en appsettings.json -> "DefaultConnection")
 var cs = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// ⚠️ Si NO usás EF Core, podés borrar este bloque AddDbContext:
-builder.Services.AddDbContext<InmobiliariaContext>(options =>
-    options.UseMySql(cs, ServerVersion.AutoDetect(cs)));
-
 // ==============================
 // Dependencias (Repos / Factory)
 // ==============================
@@ -76,7 +72,6 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
-// ⟵ Importante: primero Authentication, luego Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 

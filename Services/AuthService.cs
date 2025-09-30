@@ -60,10 +60,9 @@ namespace Inmobiliaria.Services
         {
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, u.Id.ToString()),
-                new(ClaimTypes.Name, u.Email),
+                new(ClaimTypes.Name, u.Id.ToString()),
                 new("full_name", u.NombreCompleto),
-                new("role_id", u.RolId.ToString()),
+                new(ClaimTypes.Role, u.RolId.ToString()),
             };
 
             var identity = new ClaimsIdentity(claims, "Cookies");

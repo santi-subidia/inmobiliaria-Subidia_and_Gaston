@@ -15,8 +15,9 @@
             <span asp-validation-for="Email" class="text-danger"></span>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Contraseña</label>
-            <input name="password" type="password" class="form-control" required />
+            <label asp-for="PasswordHash" class="form-label"></label>
+            <input asp-for="PasswordHash" type="password" class="form-control" required />
+            <span asp-validation-for="PasswordHash" class="text-danger"></span>
         </div>
         <div class="col-md-4">
             <label asp-for="Nombre" class="form-label"></label>
@@ -32,18 +33,11 @@
             <label asp-for="Telefono" class="form-label"></label>
             <input asp-for="Telefono" class="form-control" />
         </div>
-        <div class="col-md-6">
-            <label asp-for="AvatarUrl" class="form-label"></label>
-            <input asp-for="AvatarUrl" class="form-control" />
-        </div>
         <div class="col-md-3">
             <label asp-for="RolId" class="form-label"></label>
             <select asp-for="RolId" class="form-select">
                 <option value="1">Admin</option>
                 <option value="2">Empleado</option>
-                <option value="3">Usuario</option>
-                <option value="4">Propietario</option>
-                <option value="5">Inquilino</option>
             </select>
         </div>
         <div class="col-md-3 d-flex align-items-end">
@@ -53,7 +47,6 @@
             </div>
         </div>
     </div>
-
     <div class="mt-3">
         <button class="btn btn-primary">Guardar</button>
         <a asp-action="Index" class="btn btn-secondary">Volver</a>
