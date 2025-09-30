@@ -3,6 +3,8 @@ using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Inmobiliaria.Controllers
 {
@@ -87,12 +89,18 @@ namespace Inmobiliaria.Controllers
             if (!ModelState.IsValid) return View(u);
 
             if (!string.IsNullOrWhiteSpace(newPassword))
-                u.PasswordHash = auth.HashPassword(newPassword); // cambiar password
+                u.PasswordHash = auth.HashPassword(newPassword);
 
             u.UpdatedAt = DateTime.UtcNow;
 
             var ok = await _repo.UpdateAsync(u);
             if (!ok) return NotFound();
+
+            // Actualizar claims si es el usuario actual
+            if (User.Identity?.Name == id.ToString())
+            {
+                await UpdateUserClaimsAsync(u, auth);
+            }
 
             TempData["Success"] = "Usuario actualizado.";
             return RedirectToAction(nameof(Index));
@@ -113,7 +121,7 @@ namespace Inmobiliaria.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // POST: Usuario/ChangePassword
+        // POST: Usuario/ChangePassword  
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(long userId, string currentPassword, string newPassword, string confirmPassword, [FromServices] Services.IAuthService auth)
         {
@@ -177,7 +185,7 @@ namespace Inmobiliaria.Controllers
 
         // POST: Usuario/ChangeAvatar
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangeAvatar(long userId, IFormFile? avatarFile)
+        public async Task<IActionResult> ChangeAvatar(long userId, IFormFile? avatarFile, [FromServices] Services.IAuthService auth)
         {
             try
             {
@@ -245,6 +253,12 @@ namespace Inmobiliaria.Controllers
                     var success = await _repo.UpdateAsync(usuario);
                     if (success)
                     {
+                        // Actualizar claims si es el usuario actual
+                        if (User.Identity?.Name == userId.ToString())
+                        {
+                            await UpdateUserClaimsAsync(usuario, auth);
+                        }
+                        
                         TempData["Success"] = "Avatar actualizado exitosamente.";
                     }
                     else
@@ -259,6 +273,12 @@ namespace Inmobiliaria.Controllers
                     var success = await _repo.UpdateAsync(usuario);
                     if (success)
                     {
+                        // Actualizar claims si es el usuario actual
+                        if (User.Identity?.Name == userId.ToString())
+                        {
+                            await UpdateUserClaimsAsync(usuario, auth);
+                        }
+                        
                         TempData["Success"] = "Avatar eliminado exitosamente.";
                     }
                     else
@@ -281,6 +301,22 @@ namespace Inmobiliaria.Controllers
         {
             // Redirigir al Details sin ID para mostrar perfil del usuario actual
             return RedirectToAction("Details");
+        }
+        
+        private async Task UpdateUserClaimsAsync(Usuario usuario, Services.IAuthService auth)
+        {
+            // Crear nuevo principal con las claims actualizadas
+            var newPrincipal = auth.CreatePrincipal(usuario);
+            
+            // Renovar la autenticación con las nuevas claims
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                newPrincipal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                });
         }
     }
 }

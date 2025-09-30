@@ -63,6 +63,7 @@ namespace Inmobiliaria.Services
                 new(ClaimTypes.Name, u.Id.ToString()),
                 new("full_name", u.NombreCompleto),
                 new(ClaimTypes.Role, u.RolId.ToString()),
+                new("avatar_url", u.AvatarUrl ?? ""),
             };
 
             var identity = new ClaimsIdentity(claims, "Cookies");
