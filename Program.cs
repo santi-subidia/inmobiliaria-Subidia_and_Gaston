@@ -35,14 +35,24 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath        = "/Auth/Login";
         options.LogoutPath       = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
         options.Cookie.Name      = "Inmobiliaria.Auth";
         options.Cookie.HttpOnly  = true;
         options.SlidingExpiration = true;
         options.ExpireTimeSpan    = TimeSpan.FromHours(8);
     });
 
-builder.Services.AddAuthorization();
+// Configurar políticas de autorización
+builder.Services.AddAuthorization(options =>
+{
+    // Política para administradores solamente
+    options.AddPolicy("Administrador", policy => 
+        policy.RequireRole("Administrador"));
+    
+    // Política para administradores y empleados
+    options.AddPolicy("AdminOEmpleado", policy => 
+        policy.RequireRole("Administrador", "Empleado"));
+});
 
 builder.Services.AddControllersWithViews();
 

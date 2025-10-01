@@ -3,6 +3,8 @@
     var displayName = User?.FindFirst("full_name")?.Value ?? User?.Identity?.Name ?? "Usuario";
     var avatarUrl = User?.FindFirst("avatar_url")?.Value;
     var userId = User?.Identity?.Name;
+    var userRole = User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+    var isAdmin = userRole == "Administrador"; // Rol de administrador
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -130,11 +132,14 @@
                                     <i class="fas fa-money-bill-wave me-1"></i> Pagos
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-white-50 hover-bright" asp-controller="Usuario" asp-action="Index">
-                                    <i class="fas fa-users-cog me-1"></i> Usuarios
-                                </a>
-                            </li>
+                            @if (isAdmin)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-white-50 hover-bright" asp-controller="Usuario" asp-action="Index">
+                                        <i class="fas fa-users-cog me-1"></i> Usuarios
+                                    </a>
+                                </li>
+                            }
                         }
                     </ul>
 

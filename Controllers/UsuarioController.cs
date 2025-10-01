@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Inmobiliaria.Controllers
 {
-    // [Authorize] // requiere estar logueado por cookie
+    [Authorize]
     public class UsuarioController : Controller
     {
         private readonly IUsuarioRepository _repo;
@@ -19,7 +19,7 @@ namespace Inmobiliaria.Controllers
             _env = env;
         }
 
-        // Listado simple (sin paginado)
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Index()
         {
             var users = await _repo.GetAllAsync();
@@ -28,32 +28,31 @@ namespace Inmobiliaria.Controllers
 
         public async Task<IActionResult> Details(long id)
         {
-            var userId = id;
+            var currentUserId = long.Parse(User.Identity!.Name!);
 
-            var usuario = await _repo.GetByIdAsync(userId);
+            // Si no es administrador, solo puede ver su propio perfil
+            if (!User.IsInRole("Administrador") && currentUserId != id)
+            {
+                TempData["Error"] = "Solo puedes ver tu propio perfil.";
+                return RedirectToAction("Details", new { id = currentUserId });
+            }
+
+            var usuario = await _repo.GetByIdAsync(id);
             if (usuario == null) return NotFound();
 
-            ViewBag.RolNombre = GetRoleName(usuario.RolId); // Método auxiliar
-
+            ViewBag.RolNombre = usuario.RolName;
+            ViewBag.CanEdit = User.IsInRole("Administrador") || currentUserId == id;
+            ViewBag.IsOwnProfile = currentUserId == id;
 
             return View(usuario);
         }
 
-        // Método auxiliar para obtener nombre del rol
-        private string GetRoleName(int rolId)
-        {
-            return rolId switch
-            {
-                1 => "Administrador",
-                2 => "Empleado",
-                _ => "Sin rol definido"
-            };
-        }
-
         [HttpGet]
+        [Authorize(Policy = "Administrador")]
         public IActionResult Create() => View(new Usuario { IsActive = true });
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Create(Usuario u, [FromServices] Services.IAuthService auth)
         {
             if (await _repo.ExistsByEmailAsync(u.Email))
@@ -76,22 +75,68 @@ namespace Inmobiliaria.Controllers
         public async Task<IActionResult> Edit(long id)
         {
             var u = await _repo.GetByIdAsync(id);
-            return u is null ? NotFound() : View(u);
+            if (u is null) return NotFound();
+
+            ViewBag.CanEditRole = User.IsInRole("Administrador");
+            ViewBag.CanChangePassword = User.IsInRole("Administrador");
+            return View(u);
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, Usuario u, string? newPassword, [FromServices] Services.IAuthService auth)
+        public async Task<IActionResult> Edit(long id, Usuario u, string? newPassword, string? confirmPassword, [FromServices] Services.IAuthService auth)
         {
             if (id != u.Id) return NotFound();
+            
+            // Validar email único
             if (await _repo.ExistsByEmailAsync(u.Email, excludeId: id))
                 ModelState.AddModelError(nameof(u.Email), "Ya existe otro usuario con ese email.");
 
-            if (!ModelState.IsValid) return View(u);
-
+            // Validar contraseña solo si se está intentando cambiar
             if (!string.IsNullOrWhiteSpace(newPassword))
+            {
+                // Solo administradores pueden cambiar contraseñas desde esta vista
+                if (!User.IsInRole("Administrador"))
+                {
+                    ModelState.AddModelError("newPassword", "Solo los administradores pueden cambiar contraseñas desde esta vista.");
+                }
+                else
+                {
+                    if (newPassword.Length < 6)
+                    {
+                        ModelState.AddModelError("newPassword", "La contraseña debe tener al menos 6 caracteres.");
+                    }
+                    
+                    if (newPassword != confirmPassword)
+                    {
+                        ModelState.AddModelError("confirmPassword", "Las contraseñas no coinciden.");
+                    }
+                }
+            }
+
+            if (!ModelState.IsValid) 
+            {
+                ViewBag.CanEditRole = User.IsInRole("Administrador");
+                return View(u);
+            }
+
+            // Obtener el usuario actual de la BD para mantener ciertos campos
+            var existingUser = await _repo.GetByIdAsync(id);
+            if (existingUser == null) return NotFound();
+
+            // Actualizar contraseña solo si se proporcionó una nueva
+            if (!string.IsNullOrWhiteSpace(newPassword))
+            {
                 u.PasswordHash = auth.HashPassword(newPassword);
+                TempData["Success"] = "Usuario y contraseña actualizados correctamente.";
+            }
+            else
+            {
+                u.PasswordHash = existingUser.PasswordHash; // Mantener contraseña actual
+                TempData["Success"] = "Usuario actualizado correctamente.";
+            }
 
             u.UpdatedAt = DateTime.UtcNow;
+            u.CreatedAt = existingUser.CreatedAt; // Mantener fecha de creación
 
             var ok = await _repo.UpdateAsync(u);
             if (!ok) return NotFound();
@@ -102,11 +147,11 @@ namespace Inmobiliaria.Controllers
                 await UpdateUserClaimsAsync(u, auth);
             }
 
-            TempData["Success"] = "Usuario actualizado.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Details), new { id = u.Id });
         }
 
         [HttpGet]
+        [Authorize(Policy = "GestionUsuarios")]
         public async Task<IActionResult> Delete(long id)
         {
             var u = await _repo.GetByIdAsync(id);
@@ -114,8 +159,18 @@ namespace Inmobiliaria.Controllers
         }
 
         [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+        [Authorize(Policy = "GestionUsuarios")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
+            var currentUserId = long.Parse(User.Identity!.Name!);
+            
+            // Evitar que el admin se elimine a sí mismo
+            if (currentUserId == id)
+            {
+                TempData["Error"] = "No puedes eliminar tu propia cuenta.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await _repo.DeleteAsync(id);
             TempData["Success"] = "Usuario eliminado.";
             return RedirectToAction(nameof(Index));
@@ -127,6 +182,15 @@ namespace Inmobiliaria.Controllers
         {
             try
             {
+                var currentUserId = long.Parse(User.Identity!.Name!);
+
+                // Solo administradores pueden cambiar password de otros usuarios
+                if (!User.IsInRole("Administrador") && currentUserId != userId)
+                {
+                    TempData["Error"] = "Solo puedes cambiar tu propia contraseña.";
+                    return RedirectToAction("Details", new { id = currentUserId });
+                }
+
                 // Validaciones básicas
                 if (string.IsNullOrWhiteSpace(currentPassword))
                 {
@@ -189,6 +253,15 @@ namespace Inmobiliaria.Controllers
         {
             try
             {
+                var currentUserId = long.Parse(User.Identity!.Name!);
+
+                // Solo administradores pueden cambiar avatar de otros usuarios
+                if (!User.IsInRole("Administrador") && currentUserId != userId)
+                {
+                    TempData["Error"] = "Solo puedes cambiar tu propio avatar.";
+                    return RedirectToAction("Details", new { id = currentUserId });
+                }
+
                 var usuario = await _repo.GetByIdAsync(userId);
                 if (usuario == null)
                 {
@@ -299,8 +372,9 @@ namespace Inmobiliaria.Controllers
         // GET: Usuario/Profile (Ruta alternativa para el perfil actual)
         public IActionResult Profile()
         {
-            // Redirigir al Details sin ID para mostrar perfil del usuario actual
-            return RedirectToAction("Details");
+            // Obtener el ID del usuario actual y redirigir a Details
+            var currentUserId = long.Parse(User.Identity!.Name!);
+            return RedirectToAction("Details", new { id = currentUserId });
         }
         
         private async Task UpdateUserClaimsAsync(Usuario usuario, Services.IAuthService auth)

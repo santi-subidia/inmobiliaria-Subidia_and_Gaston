@@ -46,5 +46,12 @@ namespace Inmobiliaria.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public string NombreCompleto => $"{Nombre} {Apellido}";
+
+        public string RolName => RolId switch
+        {
+            1 => "Administrador",
+            2 => "Empleado",
+            _ => "Usuario"
+        };
     }
 }
