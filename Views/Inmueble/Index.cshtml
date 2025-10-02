@@ -1,8 +1,9 @@
 @model PagedResult<Inmobiliaria.Models.Inmueble>
 @{
   ViewData["Title"] = "Inmuebles";
-  var propNombres = ViewBag.PropNombres as IDictionary<long, string>; // 👈 long
-  var tipoNombres = ViewBag.TipoNombres as IDictionary<long, string>; // 👈 long
+  var propNombres = ViewBag.PropNombres as IDictionary<long, string>;
+  var tipoNombres = ViewBag.TipoNombres as IDictionary<long, string>; 
+  bool isAdmin = User.IsInRole("Administrador");
 }
 <h2 class="mb-3">@ViewData["Title"]</h2>
 
@@ -139,7 +140,10 @@
               class="btn btn-outline-info btn-sm">
               <i class="fas fa-images">Gestionar imágenes</i>
             </a>
-            <a asp-action="Delete" asp-route-id="@i.Id" class="btn btn-outline-danger btn-sm">Eliminar</a>
+            @if (isAdmin)
+            {
+              <a asp-action="Delete" asp-route-id="@i.Id" class="btn btn-outline-danger btn-sm">Eliminar</a>
+            }
           </div>
         </td>
       </tr>

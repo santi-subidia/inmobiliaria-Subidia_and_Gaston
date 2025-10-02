@@ -2,9 +2,11 @@ using Inmobiliaria.Data;
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class InquilinoController : Controller
     {
         private readonly IInquilinoRepository _repo;
@@ -131,6 +133,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Inquilino/Delete/5
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var inquilino = await _repo.GetByIdAsync(id);
@@ -139,6 +142,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // POST: Inquilino/Delete/5 (soft delete con FechaEliminacion)
+        [Authorize(Policy = "Administrador")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

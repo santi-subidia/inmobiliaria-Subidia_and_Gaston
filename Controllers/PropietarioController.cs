@@ -1,10 +1,12 @@
 using Inmobiliaria.Data;
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class PropietarioController : Controller
     {
         private readonly IPropietarioRepository _repo;
@@ -21,7 +23,7 @@ namespace Inmobiliaria.Controllers
             {
                 const int pageSize = 10;
                 var (items, total) = await _repo.GetPagedAsync(page, pageSize);
-                
+
                 // Crear el modelo paginado
                 var model = new PagedResult<Propietario>
                 {
@@ -30,7 +32,7 @@ namespace Inmobiliaria.Controllers
                     PageSize = pageSize,
                     CurrentPage = page
                 };
-                
+
                 return View(model);
             }
             catch (Exception ex)
@@ -92,6 +94,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Propietario/Delete/5
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var propietario = await _repo.GetByIdAsync(id);
@@ -100,6 +103,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // POST: Propietario/Delete/5 (soft delete con FechaEliminacion)
+        [Authorize(Policy = "Administrador")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

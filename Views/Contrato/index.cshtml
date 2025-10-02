@@ -1,6 +1,7 @@
 @model PagedResult<Inmobiliaria.Models.Contrato>
 @{
     ViewData["Title"] = "Contratos";
+    bool isAdmin = User.IsInRole("Administrador");
 }
 <h2 class="mb-3">@ViewData["Title"]</h2>
 
@@ -261,7 +262,10 @@
                                 <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
                                 <a asp-action="Renovar" asp-route-id="@contrato.Id" class="btn btn-outline-primary btn-sm">Renovar</a>
                             }
-                            <a asp-action="Delete" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Eliminar</a>
+                            @if (isAdmin)
+                            {
+                                <a asp-action="Delete" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Eliminar</a>
+                            }
                         </div>
                     </td>
                 </tr>
