@@ -2,19 +2,84 @@
 @{
     ViewData["Title"] = "Detalles del tipo de inmueble";
 }
-<h2>@ViewData["Title"]</h2>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">@ViewData["Title"]</h2>
+    <div>
+        @if (Model.Activo)
+        {
+            <span class="badge bg-success fs-6">Activo</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary fs-6">Inactivo</span>
+        }
+    </div>
+</div>
 
 <div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">@Model.Nombre</h5>
+    </div>
     <div class="card-body">
         <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.Id</dd>
+
             <dt class="col-sm-3">Nombre</dt>
             <dd class="col-sm-9">@Model.Nombre</dd>
 
             <dt class="col-sm-3">Descripción</dt>
-            <dd class="col-sm-9">@Model.Descripcion</dd>
+            <dd class="col-sm-9">
+                @if (string.IsNullOrEmpty(Model.Descripcion))
+                {
+                    <em class="text-muted">Sin descripción</em>
+                }
+                else
+                {
+                    @Model.Descripcion
+                }
+            </dd>
+
+            <dt class="col-sm-3">Estado</dt>
+            <dd class="col-sm-9">
+                @if (Model.Activo)
+                {
+                    <span class="badge bg-success">Activo</span>
+                    <small class="text-muted ms-2">Disponible para selección</small>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Inactivo</span>
+                    <small class="text-muted ms-2">No disponible para selección</small>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Creado</dt>
+            <dd class="col-sm-9">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+            <dt class="col-sm-3">Última actualización</dt>
+            <dd class="col-sm-9">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+            @if (Model.FechaEliminacion.HasValue)
+            {
+                <dt class="col-sm-3">Fecha de eliminación</dt>
+                <dd class="col-sm-9">
+                    <span class="text-danger">@Model.FechaEliminacion.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                </dd>
+            }
         </dl>
     </div>
 </div>
 
-<a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Editar</a>
-<a asp-action="Index" class="btn btn-secondary">Volver</a>
+<div class="mt-4">
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+        <i class="fas fa-edit"></i> Editar
+    </a>
+    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+        <i class="fas fa-trash"></i> Eliminar
+    </a>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver
+    </a>
+</div>

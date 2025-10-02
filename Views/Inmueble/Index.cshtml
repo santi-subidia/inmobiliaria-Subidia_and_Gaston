@@ -5,11 +5,17 @@
   var tipoNombres = ViewBag.TipoNombres as IDictionary<long, string>; 
   bool isAdmin = User.IsInRole("Administrador");
 }
-<h2 class="mb-3">@ViewData["Title"]</h2>
-
-<p>
-  <a asp-action="Create" class="btn btn-success">+ Nuevo inmueble</a>
-</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">@ViewData["Title"]</h2>
+  <div>
+    <a asp-action="Create" class="btn btn-success me-2">
+      <i class="fas fa-plus"></i> Nuevo inmueble
+    </a>
+    <a asp-controller="TipoInmueble" asp-action="Index" class="btn btn-outline-secondary">
+      <i class="fas fa-tags"></i> Administrar tipos
+    </a>
+  </div>
+</div>
 
 <!-- Filtros -->
 <div class="card mb-4">

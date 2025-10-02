@@ -210,9 +210,9 @@ namespace Inmobiliaria.Controllers
                 "NombreCompleto", // o una propiedad compuesta con Nombre+Apellido si la tenés
                 selectedPropietarioId);
 
-            var tipos = await _tipoRepo.GetAllAsync();
+            var tiposActivos = await _tipoRepo.GetActivosAsync();
             ViewBag.TipoId = new SelectList(
-                tipos,
+                tiposActivos,
                 "Id",
                 "Nombre",
                 selectedTipoId);

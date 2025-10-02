@@ -2,16 +2,54 @@
 @{
     ViewData["Title"] = "Eliminar tipo de inmueble";
 }
-<h2>@ViewData["Title"]</h2>
 
-<div class="alert alert-warning">
-    <h5>¿Estás seguro de eliminar este tipo de inmueble?</h5>
-    <p><strong>@Model.Nombre</strong></p>
+<h2 class="text-danger">
+    <i class="fas fa-exclamation-triangle"></i> @ViewData["Title"]
+</h2>
+
+<div class="alert alert-warning border-warning">
+    <div class="d-flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+        </div>
+        <div class="flex-grow-1 ms-3">
+            <h5 class="alert-heading">Confirmación requerida</h5>
+            <p class="mb-2">¿Está seguro de que desea eliminar este tipo de inmueble?</p>
+            <hr>
+            <div class="mb-0">
+                <strong>Tipo a eliminar:</strong> <span class="text-dark">@Model.Nombre</span><br>
+                @if (!string.IsNullOrEmpty(Model.Descripcion))
+                {
+                    <strong>Descripción:</strong> <span class="text-dark">@Model.Descripcion</span><br>
+                }
+                <strong>Estado:</strong> 
+                @if (Model.Activo)
+                {
+                    <span class="badge bg-success">Activo</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Inactivo</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i>
+    <strong>Nota:</strong> Esta acción realizará una eliminación lógica. El tipo no se eliminará físicamente de la base de datos.
 </div>
 
 <form asp-action="Delete" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id"/>
-    <button type="submit" class="btn btn-danger">Eliminar</button>
-    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash"></i> Confirmar eliminación
+        </button>
+        <a asp-action="Index" class="btn btn-secondary ms-2">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
 </form>
