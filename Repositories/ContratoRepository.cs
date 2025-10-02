@@ -318,7 +318,7 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@fecha_inicio", contrato.FechaInicio.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@fecha_fin_original", contrato.FechaFinOriginal.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
-            cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor ?? 1);
+            cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor);
             cmd.Parameters.AddWithValue("@creado_at", DateTime.UtcNow);
 
             var result = await cmd.ExecuteScalarAsync();

@@ -164,7 +164,7 @@ namespace Inmobiliaria.Controllers
                 }
                 else
                 {
-                    pago.CreadoPorId = 1; // Por ahora usar usuario fijo, después se puede integrar con sistema de autenticación
+                    pago.CreadoPorId = int.Parse(User.Identity.Name);
                     pago.CreadoAt = DateTime.UtcNow;
                     pago.Estado = "Pagado";
 
@@ -302,7 +302,8 @@ namespace Inmobiliaria.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var ok = await _repo.AnularAsync(id, 1);
+                var idUsuario = int.Parse(User.Identity.Name);
+                var ok = await _repo.AnularAsync(id, idUsuario);
                 if (ok)
                 {
                     TempData["Success"] = "Pago anulado correctamente.";

@@ -140,6 +140,7 @@ namespace Inmobiliaria.Controllers
         {
             if (ModelState.IsValid)
             {
+                contrato.CreadoPor =  long.Parse(User.Identity.Name);
                 await _repo.CreateAsync(contrato);
                 return RedirectToAction(nameof(Index));
             }
@@ -192,42 +193,44 @@ namespace Inmobiliaria.Controllers
         [HttpPost, ActionName("Delete")]
         [Authorize(Policy = "Administrador")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(long id, long idUsuario)
+        public async Task<IActionResult> DeleteConfirmed(long id)
         {
+            var idUsuario = long.Parse(User.Identity.Name);
             await _repo.DeleteAsync(id, idUsuario);
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Contrato/Finalizar/5
-        public async Task<IActionResult> Finalizar(long id)
-        {
-            var contrato = await _repo.GetByIdAsync(id);
-            if (contrato == null) return NotFound();
+        // // GET: Contrato/Finalizar/5
+        // public async Task<IActionResult> Finalizar(long id)
+        // {
+        //     var contrato = await _repo.GetByIdAsync(id);
+        //     if (contrato == null) return NotFound();
 
-            if (!contrato.PuedeFinalizarse)
-            {
-                TempData["Error"] = "Este contrato no puede ser finalizado.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
+        //     if (!contrato.PuedeFinalizarse)
+        //     {
+        //         TempData["Error"] = "Este contrato no puede ser finalizado.";
+        //         return RedirectToAction(nameof(Details), new { id });
+        //     }
 
-            return View(contrato);
-        }
+        //     return View(contrato);
+        // }
 
-        // POST: Contrato/Finalizar/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> FinalizarConfirmed(long id, DateTime? fechaFinEfectiva)
-        {
-            var ok = await _repo.FinalizarContratoAsync(id, 1, fechaFinEfectiva); // Usuario temporalmente hardcodeado
-            if (!ok)
-            {
-                TempData["Error"] = "No se pudo finalizar el contrato.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
+        // // POST: Contrato/Finalizar/5
+        // [HttpPost]
+        // [ValidateAntiForgeryToken]
+        // public async Task<IActionResult> FinalizarConfirmed(long id, DateTime? fechaFinEfectiva)
+        // {
+        //     var idUsuario = long.Parse(User.Identity.Name);
+        //     var ok = await _repo.FinalizarContratoAsync(id, idUsuario, fechaFinEfectiva);
+        //     if (!ok)
+        //     {
+        //         TempData["Error"] = "No se pudo finalizar el contrato.";
+        //         return RedirectToAction(nameof(Details), new { id });
+        //     }
 
-            TempData["Success"] = "Contrato finalizado exitosamente.";
-            return RedirectToAction(nameof(Index));
-        }
+        //     TempData["Success"] = "Contrato finalizado exitosamente.";
+        //     return RedirectToAction(nameof(Index));
+        // }
 
         // GET: Contrato/Rescindir/5
         public async Task<IActionResult> Rescindir(long id)
@@ -249,7 +252,8 @@ namespace Inmobiliaria.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RescindirConfirmed(long id, DateTime? fechaFinEfectiva)
         {
-            var ok = await _repo.RescindirContratoAsync(id, 1, fechaFinEfectiva); // Usuario temporalmente hardcodeado
+            var idUsuario = long.Parse(User.Identity.Name);
+            var ok = await _repo.RescindirContratoAsync(id, idUsuario, fechaFinEfectiva);
             if (!ok)
             {
                 TempData["Error"] = "No se pudo rescindir el contrato.";
@@ -433,7 +437,7 @@ namespace Inmobiliaria.Controllers
                 }
 
                 // Establecer datos adicionales
-                nuevoContrato.CreadoPor = 1; // TODO: Usar usuario actual
+                nuevoContrato.CreadoPor = long.Parse(User.Identity.Name);
                 nuevoContrato.CreadoAt = DateTime.UtcNow;
 
                 var id = await _repo.CreateAsync(nuevoContrato);
