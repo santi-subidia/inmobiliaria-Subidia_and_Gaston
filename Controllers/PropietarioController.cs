@@ -10,10 +10,12 @@ namespace Inmobiliaria.Controllers
     public class PropietarioController : Controller
     {
         private readonly IPropietarioRepository _repo;
+        private readonly IInquilinoRepository _inquilinoRepo;
 
-        public PropietarioController(IPropietarioRepository repo)
+        public PropietarioController(IPropietarioRepository repo, IInquilinoRepository inquilinoRepo)
         {
             _repo = repo;
+            _inquilinoRepo = inquilinoRepo;
         }
 
         // GET: Propietario
@@ -56,6 +58,35 @@ namespace Inmobiliaria.Controllers
             return View();
         }
 
+        // GET: Propietario/ExisteDni?dni=12345678
+        [HttpGet]
+        public async Task<IActionResult> ExisteDni(string dni)
+        {
+            if (string.IsNullOrWhiteSpace(dni)) return Json(null);
+            var propietario = await _repo.GetByDniAsync(dni);
+            if (propietario != null)
+            {
+                if (propietario.FechaEliminacion == null)
+                    return Json(new { mensaje = "El propietario ya existe." });
+                else
+                {
+                    if (await _repo.UpdateFechaEliminacionAsync(propietario.Id))
+                    {
+                        propietario.FechaEliminacion = null;
+                        return Json(new { mensaje = "El propietario existía pero fue reactivado." });
+                    }
+                }
+            }
+            var inquilino = await _inquilinoRepo.GetByDniAsync(dni);
+            if (inquilino != null)
+            {
+                var PropietarioFromInquilino = Propietario.PropietarioFromInquilino(inquilino);
+                var id = await _repo.CreateAsync(PropietarioFromInquilino);
+                return Json(new { mensaje = "El propietario fue creado a partir del inquilino." });
+            }
+            return Json(null);
+        }
+
         // POST: Propietario/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -86,6 +117,28 @@ namespace Inmobiliaria.Controllers
 
             if (ModelState.IsValid)
             {
+                var existente = await _repo.GetByDniAsync(propietario.Dni!);
+                if (existente != null && existente.Id != id)
+                {
+                    if (existente.FechaEliminacion == null)
+                    {
+                        ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un propietario con ese DNI.");
+                        return View(propietario);
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un propietario con ese DNI que fue eliminado. Intente crear el propietario nuevamente para reactivarlo.");
+                        return View(propietario);
+                    }
+                }
+
+                var existeInquilino = await _inquilinoRepo.GetByDniAsync(propietario.Dni!);
+                if (existeInquilino != null)
+                {
+                    ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un inquilino con ese DNI. Intente crear el propietario nuevamente para copiar los datos del inquilino.");
+                    return View(propietario);
+                }
+                
                 var ok = await _repo.UpdateAsync(propietario);
                 if (!ok) return NotFound();
                 return RedirectToAction(nameof(Index));

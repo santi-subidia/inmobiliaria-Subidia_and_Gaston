@@ -125,6 +125,28 @@ namespace Inmobiliaria.Controllers
 
             if (ModelState.IsValid)
             {
+                var existente = await _repo.GetByDniAsync(inquilino.Dni!);
+                if (existente != null && existente.Id != id)
+                {
+                    if (existente.FechaEliminacion == null)
+                    {
+                        ModelState.AddModelError(nameof(Inquilino.Dni), "Ya existe un inquilino con ese DNI.");
+                        return View(inquilino);
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(nameof(Inquilino.Dni), "Ya existe un inquilino con ese DNI que fue eliminado. Intente crear el inquilino nuevamente para reactivarlo.");
+                        return View(inquilino);
+                    }
+                }
+
+                var existePropietario = await _propietarioRepo.GetByDniAsync(inquilino.Dni!);
+                if (existePropietario != null)
+                {
+                    ModelState.AddModelError(nameof(Inquilino.Dni), "Ya existe un propietario con ese DNI. Intente crear el inquilino para copiar los datos del propietario.");
+                    return View(inquilino);
+                }
+                
                 var ok = await _repo.UpdateAsync(inquilino);
                 if (!ok) return NotFound();
                 return RedirectToAction(nameof(Index));
