@@ -35,9 +35,11 @@ namespace Inmobiliaria.Models
         public string? AvatarUrl { get; set; }
 
         [Required]
-        public int RolId { get; set; } // FK a rol_usuarios(id)
+        public int RolId { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        public DateOnly? FechaEliminacion { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -85,8 +85,8 @@ namespace Inmobiliaria.Controllers
 
         // POST: TipoInmueble/Delete/5 (soft delete)
         [HttpPost, ActionName("Delete")]
-        [Authorize(Policy = "Administrador")]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             await _repo.DeleteAsync(id);

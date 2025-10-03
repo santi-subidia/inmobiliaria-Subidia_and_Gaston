@@ -1,6 +1,7 @@
 @model Inmobiliaria.Models.Pago
 @{
     ViewData["Title"] = "Detalle de Pago";
+    bool esAdmin = User.IsInRole("Administrador");
 }
 
 <h2 class="mb-3">@ViewData["Title"]</h2>
@@ -34,12 +35,14 @@
             <span class="badge bg-secondary">@Model.Estado</span>
         }
     </dd>
-    <dt class="col-sm-3">Creado por</dt>    <dd class="col-sm-9">Usuario #@Model.CreadoPorId</dd>
-    <dt class="col-sm-3">Creado</dt>        <dd class="col-sm-9">@Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")</dd>
-    @if (Model.AnuladoAt.HasValue)
-    {
-        <dt class="col-sm-3">Anulado por</dt> <dd class="col-sm-9">Usuario #@Model.AnuladoPorId</dd>
-        <dt class="col-sm-3">Anulado</dt>     <dd class="col-sm-9">@Model.AnuladoAt?.ToString("dd/MM/yyyy HH:mm")</dd>
+    @if(esAdmin){
+        <dt class="col-sm-3">Creado por</dt>    <dd class="col-sm-9">Usuario #@Model.CreadoPorId</dd>
+        <dt class="col-sm-3">Creado</dt>        <dd class="col-sm-9">@Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")</dd>
+        @if (Model.AnuladoAt.HasValue)
+        {
+            <dt class="col-sm-3">Anulado por</dt> <dd class="col-sm-9">Usuario #@Model.AnuladoPorId</dd>
+            <dt class="col-sm-3">Anulado</dt>     <dd class="col-sm-9">@Model.AnuladoAt?.ToString("dd/MM/yyyy HH:mm")</dd>
+        }
     }
 </dl>
 

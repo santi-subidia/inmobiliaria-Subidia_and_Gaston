@@ -56,9 +56,18 @@ namespace Inmobiliaria.Controllers
         public async Task<IActionResult> Create(Usuario u, [FromServices] Services.IAuthService auth)
         {
             if (await _repo.ExistsByEmailAsync(u.Email))
+            {
+                var usuarioExistente = await _repo.GetByEmailAsync(u.Email);
+                if (usuarioExistente != null && usuarioExistente.FechaEliminacion != null)
+                {
+                    await _repo.UpdateFechaEliminacionAsync(usuarioExistente.Id);
+                    TempData["Success"] = "Usuario reactivado correctamente.";
+                    return RedirectToAction(nameof(Index));
+                }
                 ModelState.AddModelError(nameof(u.Email), "Ya existe un usuario con ese email.");
+            }
             if (string.IsNullOrWhiteSpace(u.PasswordHash))
-                ModelState.AddModelError(nameof(u.PasswordHash), "La contraseña es obligatoria.");
+                    ModelState.AddModelError(nameof(u.PasswordHash), "La contraseña es obligatoria.");
 
             if (!ModelState.IsValid) return View(u);
 
@@ -151,7 +160,7 @@ namespace Inmobiliaria.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "GestionUsuarios")]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var u = await _repo.GetByIdAsync(id);
@@ -159,7 +168,7 @@ namespace Inmobiliaria.Controllers
         }
 
         [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
-        [Authorize(Policy = "GestionUsuarios")]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var currentUserId = long.Parse(User.Identity!.Name!);

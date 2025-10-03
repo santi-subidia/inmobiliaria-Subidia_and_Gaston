@@ -48,10 +48,6 @@ builder.Services.AddAuthorization(options =>
     // Política para administradores solamente
     options.AddPolicy("Administrador", policy => 
         policy.RequireRole("Administrador"));
-    
-    // Política para administradores y empleados
-    options.AddPolicy("AdminOEmpleado", policy => 
-        policy.RequireRole("Administrador", "Empleado"));
 });
 
 builder.Services.AddControllersWithViews();

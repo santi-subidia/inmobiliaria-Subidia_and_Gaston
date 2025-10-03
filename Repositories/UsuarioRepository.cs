@@ -15,7 +15,7 @@ namespace Inmobiliaria.Repositories
             var list = new List<Usuario>();
             using var conn = _cf.CreateConnection();
             await conn.OpenAsync();
-            const string sql = "SELECT * FROM usuarios ORDER BY id DESC";
+            const string sql = "SELECT * FROM usuarios WHERE fecha_eliminacion IS NULL ORDER BY id DESC";
             using var cmd = new MySqlCommand(sql, conn);
             using var r = await cmd.ExecuteReaderAsync();
             while (await r.ReadAsync()) list.Add(Map(r));
@@ -108,7 +108,18 @@ WHERE id=@id;";
         {
             using var conn = _cf.CreateConnection();
             await conn.OpenAsync();
-            const string sql = "DELETE FROM usuarios WHERE id=@id";
+            const string sql = "UPDATE usuarios SET fecha_eliminacion=NOW() WHERE id=@id";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+        }
+
+        public async Task<bool> UpdateFechaEliminacionAsync(long id)
+        {
+            using var conn = _cf.CreateConnection();
+            await conn.OpenAsync();
+            const string sql = "UPDATE usuarios SET fecha_eliminacion=NULL WHERE id=@id";
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
             var rows = await cmd.ExecuteNonQueryAsync();
@@ -117,17 +128,18 @@ WHERE id=@id;";
 
         private static Usuario Map(MySqlDataReader r) => new()
         {
-            Id          = r.GetInt64("id"),
-            Email       = r.GetString("email"),
-            PasswordHash= r.GetString("password_hash"),
-            Nombre      = r.GetString("nombre"),
-            Apellido    = r.GetString("apellido"),
-            Telefono    = r.IsDBNull(r.GetOrdinal("telefono")) ? null : r.GetString("telefono"),
-            AvatarUrl   = r.IsDBNull(r.GetOrdinal("avatar_url")) ? null : r.GetString("avatar_url"),
-            RolId       = r.GetInt32("rol_id"),
-            IsActive    = r.GetBoolean("is_active"),
-            CreatedAt   = r.GetDateTime("created_at"),
-            UpdatedAt   = r.GetDateTime("updated_at"),
+            Id = r.GetInt64("id"),
+            Email = r.GetString("email"),
+            PasswordHash = r.GetString("password_hash"),
+            Nombre = r.GetString("nombre"),
+            Apellido = r.GetString("apellido"),
+            Telefono = r.IsDBNull(r.GetOrdinal("telefono")) ? null : r.GetString("telefono"),
+            AvatarUrl = r.IsDBNull(r.GetOrdinal("avatar_url")) ? null : r.GetString("avatar_url"),
+            RolId = r.GetInt32("rol_id"),
+            FechaEliminacion = r.IsDBNull(r.GetOrdinal("fecha_eliminacion")) ? null : DateOnly.FromDateTime(r.GetDateTime("fecha_eliminacion")),
+            IsActive = r.GetBoolean("is_active"),
+            CreatedAt = r.GetDateTime("created_at"),
+            UpdatedAt = r.GetDateTime("updated_at"),
         };
     }
 }
