@@ -32,9 +32,12 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
 
-            // Total
-            string sqlCount = "SELECT COUNT(*) FROM pagos p";
-            if (contratoId.HasValue) sqlCount += " WHERE p.contrato_id = @contrato_id";
+            // Total - debe coincidir con los filtros de la consulta principal
+            string sqlCount = @"SELECT COUNT(*) 
+                               FROM pagos p
+                               LEFT JOIN contratos c ON p.contrato_id = c.id
+                               WHERE c.fecha_eliminacion IS NULL";
+            if (contratoId.HasValue) sqlCount += " AND p.contrato_id = @contrato_id";
 
             using var cmdCount = new MySqlCommand(sqlCount, conn);
             if (contratoId.HasValue) cmdCount.Parameters.AddWithValue("@contrato_id", contratoId.Value);
@@ -309,27 +312,6 @@ namespace Inmobiliaria.Repositories
             if (await reader.ReadAsync())
             {
                 return reader.GetInt32("cantidad_pagos");
-            }
-
-            return 0;
-        }
-
-        public async Task<decimal> GetTotalRecaudadoAsync()
-        {
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-
-            const string sql = @"
-                SELECT COALESCE(SUM(importe), 0) as total_recaudado
-                FROM pagos 
-                WHERE estado = 'Pagado'";
-
-            using var cmd = new MySqlCommand(sql, conn);
-            using var reader = await cmd.ExecuteReaderAsync();
-            
-            if (await reader.ReadAsync())
-            {
-                return reader.GetDecimal("total_recaudado");
             }
 
             return 0;

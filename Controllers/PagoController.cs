@@ -34,7 +34,15 @@ namespace Inmobiliaria.Controllers
             }).ToList();
 
             // Estadísticas generales
-            var totalRecaudado = await _repo.GetTotalRecaudadoAsync();
+            var totalRecaudado = 0;
+            foreach (var pago in items)
+            {
+                if (pago.Estado == "Pagado")
+                {
+                    totalRecaudado += (int)pago.Importe;
+                }
+            }
+
             var pagosEstesMes = await _repo.GetPagosDelMesAsync(DateTime.Now.Year, DateTime.Now.Month);
             var contratosActivosCount = contratos.Count(c => c.Estado() == "VIGENTE");
 

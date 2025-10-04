@@ -14,7 +14,6 @@ namespace Inmobiliaria.Repositories
         Task<IEnumerable<Pago>> GetByContratoIdAsync(long contratoId);
         Task<(int cantidadPagos, decimal montoPagado)> GetMontoPagadoAndCantidadPagosByContratoAsync(long contratoId);
         Task<int> GetCantidadPagosByContratoAsync(long contratoId);
-        Task<decimal> GetTotalRecaudadoAsync();
         Task<int> GetPagosDelMesAsync(int year, int month);
     }
 }
