@@ -250,18 +250,35 @@ namespace Inmobiliaria.Controllers
         // POST: Contrato/Rescindir/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RescindirConfirmed(long id, DateTime? fechaFinEfectiva)
+        public async Task<IActionResult> RescindirConfirmed(long id, DateTime? fechaFinEfectiva, DateTime fecha_fin_original, DateTime fecha_inicio)
         {
-            var idUsuario = long.Parse(User.Identity.Name);
-            var ok = await _repo.RescindirContratoAsync(id, idUsuario, fechaFinEfectiva);
-            if (!ok)
+            // Validar que la fecha de fin efectiva no sea mayor a la fecha de fin original
+            if (fechaFinEfectiva.HasValue)
             {
-                TempData["Error"] = "No se pudo rescindir el contrato.";
-                return RedirectToAction(nameof(Details), new { id });
+                if (fechaFinEfectiva >= fecha_fin_original)
+                {
+                    TempData["Error"] = "La fecha de fin efectiva no puede ser mayor o igual a la fecha de fin original.";
+                    return RedirectToAction(nameof(Rescindir), new { id });
+                }
+                if (fechaFinEfectiva <= fecha_inicio)
+                {
+                    TempData["Error"] = "La fecha de fin efectiva no puede ser anterior o igual a la fecha de inicio del contrato.";
+                    return RedirectToAction(nameof(Rescindir), new { id });
+                }
             }
 
-            TempData["Success"] = "Contrato rescindido exitosamente.";
-            return RedirectToAction(nameof(Index));
+            {
+                var idUsuario = long.Parse(User.Identity.Name);
+                var ok = await _repo.RescindirContratoAsync(id, idUsuario, fechaFinEfectiva);
+                if (!ok)
+                {
+                    TempData["Error"] = "No se pudo rescindir el contrato.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                TempData["Success"] = "Contrato rescindido exitosamente.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // GET: Contrato/PorInquilino/5
