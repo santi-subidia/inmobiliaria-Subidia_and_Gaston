@@ -60,6 +60,13 @@ namespace Inmobiliaria.Controllers
                     return View(pagedProximos);
                 }
 
+                if (fechaDesde.HasValue && fechaHasta.HasValue && fechaDesde >= fechaHasta)
+                {
+                    fechaDesde = null;
+                    fechaHasta = null;
+                    TempData["Error"] = $"Error al cargar contratos: La fecha 'Desde' no puede ser mayor o igual que la fecha 'Hasta'.";
+                }
+
                 // Filtros normales con paginación
                 var (items, total) = await _repo.GetPagedWithFiltersAsync(page, pageSize, estado, propietarioId, inmuebleId, fechaDesde, fechaHasta);
 

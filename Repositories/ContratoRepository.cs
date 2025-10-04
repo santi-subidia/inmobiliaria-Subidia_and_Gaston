@@ -488,13 +488,13 @@ namespace Inmobiliaria.Repositories
 
             if (fechaDesde.HasValue)
             {
-                whereConditions.Add("c.fecha_inicio >= @fechaDesde");
+                whereConditions.Add("c.fecha_inicio <= @fechaDesde");
                 parameters.Add(new MySqlParameter("@fechaDesde", fechaDesde.Value.ToString("yyyy-MM-dd")));
             }
 
             if (fechaHasta.HasValue)
             {
-                whereConditions.Add("c.fecha_fin_original <= @fechaHasta");
+                whereConditions.Add("c.fecha_fin_original >= @fechaHasta");
                 parameters.Add(new MySqlParameter("@fechaHasta", fechaHasta.Value.ToString("yyyy-MM-dd")));
             }
 
