@@ -1,17 +1,21 @@
 using Inmobiliaria.Data;
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class PropietarioController : Controller
     {
         private readonly IPropietarioRepository _repo;
+        private readonly IInquilinoRepository _inquilinoRepo;
 
-        public PropietarioController(IPropietarioRepository repo)
+        public PropietarioController(IPropietarioRepository repo, IInquilinoRepository inquilinoRepo)
         {
             _repo = repo;
+            _inquilinoRepo = inquilinoRepo;
         }
 
         // GET: Propietario
@@ -21,7 +25,7 @@ namespace Inmobiliaria.Controllers
             {
                 const int pageSize = 10;
                 var (items, total) = await _repo.GetPagedAsync(page, pageSize);
-                
+
                 // Crear el modelo paginado
                 var model = new PagedResult<Propietario>
                 {
@@ -30,7 +34,7 @@ namespace Inmobiliaria.Controllers
                     PageSize = pageSize,
                     CurrentPage = page
                 };
-                
+
                 return View(model);
             }
             catch (Exception ex)
@@ -52,6 +56,35 @@ namespace Inmobiliaria.Controllers
         public IActionResult Create()
         {
             return View();
+        }
+
+        // GET: Propietario/ExisteDni?dni=12345678
+        [HttpGet]
+        public async Task<IActionResult> ExisteDni(string dni)
+        {
+            if (string.IsNullOrWhiteSpace(dni)) return Json(null);
+            var propietario = await _repo.GetByDniAsync(dni);
+            if (propietario != null)
+            {
+                if (propietario.FechaEliminacion == null)
+                    return Json(new { mensaje = "El propietario ya existe." });
+                else
+                {
+                    if (await _repo.UpdateFechaEliminacionAsync(propietario.Id))
+                    {
+                        propietario.FechaEliminacion = null;
+                        return Json(new { mensaje = "El propietario existía pero fue reactivado." });
+                    }
+                }
+            }
+            var inquilino = await _inquilinoRepo.GetByDniAsync(dni);
+            if (inquilino != null)
+            {
+                var PropietarioFromInquilino = Propietario.PropietarioFromInquilino(inquilino);
+                var id = await _repo.CreateAsync(PropietarioFromInquilino);
+                return Json(new { mensaje = "El propietario fue creado a partir del inquilino." });
+            }
+            return Json(null);
         }
 
         // POST: Propietario/Create
@@ -84,6 +117,28 @@ namespace Inmobiliaria.Controllers
 
             if (ModelState.IsValid)
             {
+                var existente = await _repo.GetByDniAsync(propietario.Dni!);
+                if (existente != null && existente.Id != id)
+                {
+                    if (existente.FechaEliminacion == null)
+                    {
+                        ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un propietario con ese DNI.");
+                        return View(propietario);
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un propietario con ese DNI que fue eliminado. Intente crear el propietario nuevamente para reactivarlo.");
+                        return View(propietario);
+                    }
+                }
+
+                var existeInquilino = await _inquilinoRepo.GetByDniAsync(propietario.Dni!);
+                if (existeInquilino != null)
+                {
+                    ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un inquilino con ese DNI. Intente crear el propietario nuevamente para copiar los datos del inquilino.");
+                    return View(propietario);
+                }
+                
                 var ok = await _repo.UpdateAsync(propietario);
                 if (!ok) return NotFound();
                 return RedirectToAction(nameof(Index));
@@ -92,6 +147,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Propietario/Delete/5
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var propietario = await _repo.GetByIdAsync(id);
@@ -100,6 +156,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // POST: Propietario/Delete/5 (soft delete con FechaEliminacion)
+        [Authorize(Policy = "Administrador")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)

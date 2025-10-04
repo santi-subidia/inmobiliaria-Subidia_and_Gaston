@@ -1,10 +1,12 @@
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class InmuebleController : Controller
     {
         private readonly IInmuebleRepository _repo;
@@ -32,7 +34,7 @@ namespace Inmobiliaria.Controllers
         {
             // Usar el método paginado con filtros en SQL
             var (items, total) = await _repo.GetPagedAsync(page, pageSize, suspendido, propietarioId);
-            
+
             // Crear el modelo paginado
             var model = new PagedResult<Inmueble>
             {
@@ -41,7 +43,7 @@ namespace Inmobiliaria.Controllers
                 PageSize = pageSize,
                 CurrentPage = page
             };
-            
+
             // Pasar los filtros a la vista
             ViewBag.FiltroSuspendido = suspendido;
             ViewBag.FiltroPropietarioId = propietarioId;
@@ -49,13 +51,13 @@ namespace Inmobiliaria.Controllers
             // Propietarios: clave long para evitar mismatch
             var propietarios = await _propietarioRepo.GetAllAsync();
             var mapProp = propietarios.ToDictionary(
-                p => (long)p.Id,                                 
+                p => (long)p.Id,
                 p => $"{p.Apellido}, {p.Nombre}");
 
             // Tipos: también long por coherencia (aunque funcione con int)
             var tipos = await _tipoRepo.GetAllAsync();
             var mapTipo = tipos.ToDictionary(
-                t => (long)t.Id,                                 
+                t => (long)t.Id,
                 t => t.Nombre ?? $"Tipo {t.Id}");
 
             ViewBag.PropNombres = mapProp;
@@ -85,7 +87,8 @@ namespace Inmobiliaria.Controllers
                     ModelState.AddModelError("", "No se pudo crear el inmueble. Intente nuevamente.");
                     await LoadCombosAsync(inmueble.PropietarioId, inmueble.TipoId);
                     return View(inmueble);
-                }else
+                }
+                else
                 {
                     TempData["Success"] = "Inmueble creado exitosamente.";
                     await LoadCombosAsync();
@@ -126,6 +129,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Inmueble/Delete/5  (confirmar suspensión)
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var inm = await _repo.GetByIdAsync(id);
@@ -136,6 +140,7 @@ namespace Inmobiliaria.Controllers
         // POST: Inmueble/Delete/5  (soft delete → Suspendido = true)
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             await _repo.DeleteAsync(id);
@@ -159,23 +164,23 @@ namespace Inmobiliaria.Controllers
             if (propietario == null) return NotFound();
 
             var lista = await _repo.GetByPropietarioAsync(id);
-            
+
             // Preparar datos para la vista (como en Index)
             var propietarios = await _propietarioRepo.GetAllAsync();
             var mapProp = propietarios.ToDictionary(
-                p => (long)p.Id,                                 
+                p => (long)p.Id,
                 p => $"{p.Apellido}, {p.Nombre}");
 
             var tipos = await _tipoRepo.GetAllAsync();
             var mapTipo = tipos.ToDictionary(
-                t => (long)t.Id,                                 
+                t => (long)t.Id,
                 t => t.Nombre ?? $"Tipo {t.Id}");
 
             ViewBag.PropNombres = mapProp;
             ViewBag.TipoNombres = mapTipo;
             ViewBag.PropietarioSeleccionado = propietario.NombreCompleto;
             ViewData["Title"] = $"Inmuebles de {propietario.NombreCompleto}";
-            
+
             return View("Index", lista);
         }
 
@@ -184,14 +189,14 @@ namespace Inmobiliaria.Controllers
         {
             var inmueble = await _repo.GetByIdAsync(id);
             if (inmueble == null) return NotFound();
-            
+
             inmueble.Propietario = await _propietarioRepo.GetByIdAsync(inmueble.PropietarioId);
             inmueble.Tipo = await _tipoRepo.GetByIdAsync(inmueble.TipoId);
-            
+
             // Cargar imágenes del inmueble
             var imagenes = await _imagenRepo.GetByInmuebleIdAsync((int)id);
             ViewBag.Imagenes = imagenes;
-            
+
             return View(inmueble);
         }
 
@@ -205,9 +210,9 @@ namespace Inmobiliaria.Controllers
                 "NombreCompleto", // o una propiedad compuesta con Nombre+Apellido si la tenés
                 selectedPropietarioId);
 
-            var tipos = await _tipoRepo.GetAllAsync();
+            var tiposActivos = await _tipoRepo.GetActivosAsync();
             ViewBag.TipoId = new SelectList(
-                tipos,
+                tiposActivos,
                 "Id",
                 "Nombre",
                 selectedTipoId);

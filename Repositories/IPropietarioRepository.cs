@@ -12,7 +12,6 @@ namespace Inmobiliaria.Repositories
         Task<long> CreateAsync(Propietario p);
         Task<bool> UpdateAsync(Propietario p);
         Task<bool> DeleteAsync(long id);                 // soft delete: setea fecha_eliminacion
-        Task<bool> UpdateFechaEliminacionAsync(long id); // alias por compatibilidad (marca eliminado)
-        Task<bool> RestoreAsync(long id);                // revierte soft delete (fecha_eliminacion = NULL)
+        Task<bool> UpdateFechaEliminacionAsync(long id); // alias por compatibilidad (marca eliminado            // revierte soft delete (fecha_eliminacion = NULL)
     }
 }

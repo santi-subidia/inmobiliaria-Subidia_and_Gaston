@@ -318,7 +318,7 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@fecha_inicio", contrato.FechaInicio.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@fecha_fin_original", contrato.FechaFinOriginal.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@monto_mensual", contrato.MontoMensual);
-            cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor ?? 1);
+            cmd.Parameters.AddWithValue("@creado_por", contrato.CreadoPor);
             cmd.Parameters.AddWithValue("@creado_at", DateTime.UtcNow);
 
             var result = await cmd.ExecuteScalarAsync();
@@ -488,13 +488,13 @@ namespace Inmobiliaria.Repositories
 
             if (fechaDesde.HasValue)
             {
-                whereConditions.Add("c.fecha_inicio >= @fechaDesde");
+                whereConditions.Add("c.fecha_inicio <= @fechaDesde");
                 parameters.Add(new MySqlParameter("@fechaDesde", fechaDesde.Value.ToString("yyyy-MM-dd")));
             }
 
             if (fechaHasta.HasValue)
             {
-                whereConditions.Add("c.fecha_fin_original <= @fechaHasta");
+                whereConditions.Add("c.fecha_fin_original >= @fechaHasta");
                 parameters.Add(new MySqlParameter("@fechaHasta", fechaHasta.Value.ToString("yyyy-MM-dd")));
             }
 

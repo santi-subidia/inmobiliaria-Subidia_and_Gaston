@@ -156,28 +156,18 @@ WHERE id = @id;";
             return rows > 0;
         }
 
-        /// <summary>
-        /// Alias por compatibilidad con otros controladores (marca eliminado)
-        /// </summary>
-        public Task<bool> UpdateFechaEliminacionAsync(long id) => DeleteAsync(id);
-
-        /// <summary>
-        /// Restaura un propietario eliminado (fecha_eliminacion = NULL)
-        /// </summary>
-        public async Task<bool> RestoreAsync(long id)
+        public async Task<bool> UpdateFechaEliminacionAsync(long id)
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
-
-            const string sql = @"UPDATE propietarios 
-                                 SET fecha_eliminacion=NULL 
-                                 WHERE id=@id";
-            using var cmd = new MySqlCommand(sql, conn);
+            String sql = "UPDATE propietarios SET fecha_eliminacion = @fecha_eliminacion WHERE id=@id";
+            var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
-
+            cmd.Parameters.AddWithValue("@fecha_eliminacion", DBNull.Value);
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
         }
+
 
         public async Task<(IEnumerable<Propietario> Items, int TotalCount)> GetPagedAsync(int page = 1, int pageSize = 10)
         {

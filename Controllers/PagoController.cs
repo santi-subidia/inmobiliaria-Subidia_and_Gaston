@@ -1,11 +1,13 @@
 using System.Reflection.Metadata.Ecma335;
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class PagoController : Controller
     {
         private readonly IPagoRepository _repo;
@@ -32,7 +34,15 @@ namespace Inmobiliaria.Controllers
             }).ToList();
 
             // Estadísticas generales
-            var totalRecaudado = await _repo.GetTotalRecaudadoAsync();
+            var totalRecaudado = 0;
+            foreach (var pago in items)
+            {
+                if (pago.Estado == "Pagado")
+                {
+                    totalRecaudado += (int)pago.Importe;
+                }
+            }
+
             var pagosEstesMes = await _repo.GetPagosDelMesAsync(DateTime.Now.Year, DateTime.Now.Month);
             var contratosActivosCount = contratos.Count(c => c.Estado() == "VIGENTE");
 
@@ -91,7 +101,7 @@ namespace Inmobiliaria.Controllers
             var (cantidadPagos, montoPagado) = await _repo.GetMontoPagadoAndCantidadPagosByContratoAsync(contratoId.Value);
             decimal saldoPendiente = contrato.MontoTotal + contrato.MontoMulta - montoPagado;
             var cantidadPagosTotales = await _repo.GetCantidadPagosByContratoAsync(contratoId.Value);
-            
+
             var pago = new Pago
             {
                 ContratoId = contratoId.Value,
@@ -140,14 +150,14 @@ namespace Inmobiliaria.Controllers
             // Validación del importe máximo permitido
             if (pago.Importe > saldoPendiente)
             {
-                ModelState.AddModelError(nameof(pago.Importe), 
+                ModelState.AddModelError(nameof(pago.Importe),
                     $"El importe no puede ser superior al saldo pendiente: ${saldoPendiente:N2}");
             }
 
             // Validación de importe mínimo
             if (pago.Importe <= 0)
             {
-                ModelState.AddModelError(nameof(pago.Importe), 
+                ModelState.AddModelError(nameof(pago.Importe),
                     "El importe debe ser mayor a cero.");
             }
 
@@ -162,20 +172,20 @@ namespace Inmobiliaria.Controllers
                 }
                 else
                 {
-                    pago.CreadoPorId = 1; // Por ahora usar usuario fijo, después se puede integrar con sistema de autenticación
+                    pago.CreadoPorId = int.Parse(User.Identity.Name);
                     pago.CreadoAt = DateTime.UtcNow;
                     pago.Estado = "Pagado";
 
                     await _repo.CreateAsync(pago);
                     TempData["Success"] = $"Pago #{pago.NumeroPago} creado correctamente por ${pago.Importe:N2}.";
-                    
+
                     // Verificar si el contrato queda totalmente pagado
                     decimal nuevoSaldo = saldoPendiente - pago.Importe;
                     if (nuevoSaldo <= 0)
                     {
                         TempData["Info"] = "¡El contrato ha sido totalmente pagado!";
                     }
-                    
+
                     return RedirectToAction("IndexByContrato", new { id = pago.ContratoId });
                 }
             }
@@ -244,7 +254,7 @@ namespace Inmobiliaria.Controllers
 
             var pagos = await _repo.GetByContratoIdAsync(id);
             var (cantidadPagos, totalPagado) = await _repo.GetMontoPagadoAndCantidadPagosByContratoAsync(id);
-            
+
             ViewBag.Contrato = contrato;
             ViewBag.ContratoId = id;
             ViewBag.TotalPagado = totalPagado;
@@ -273,7 +283,7 @@ namespace Inmobiliaria.Controllers
                     TempData["Error"] = "Pago no encontrado.";
                     if (ContratoId.HasValue)
                     {
-                        return RedirectToAction("IndexByContrato", new { id = ContratoId }); 
+                        return RedirectToAction("IndexByContrato", new { id = ContratoId });
 
                     }
                     return RedirectToAction("Index");
@@ -284,7 +294,7 @@ namespace Inmobiliaria.Controllers
                     TempData["Warning"] = "El pago ya está anulado.";
                     if (ContratoId.HasValue)
                     {
-                        return RedirectToAction("IndexByContrato", new { id = ContratoId }); 
+                        return RedirectToAction("IndexByContrato", new { id = ContratoId });
 
                     }
                     return RedirectToAction("Index");
@@ -300,7 +310,8 @@ namespace Inmobiliaria.Controllers
                     return RedirectToAction("Index");
                 }
 
-                var ok = await _repo.AnularAsync(id, 1);
+                var idUsuario = int.Parse(User.Identity.Name);
+                var ok = await _repo.AnularAsync(id, idUsuario);
                 if (ok)
                 {
                     TempData["Success"] = "Pago anulado correctamente.";

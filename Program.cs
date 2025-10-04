@@ -9,10 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 // 🔗 Cadena de conexión (definida en appsettings.json -> "DefaultConnection")
 var cs = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// ⚠️ Si NO usás EF Core, podés borrar este bloque AddDbContext:
-builder.Services.AddDbContext<InmobiliariaContext>(options =>
-    options.UseMySql(cs, ServerVersion.AutoDetect(cs)));
-
 // ==============================
 // Dependencias (Repos / Factory)
 // ==============================
@@ -39,14 +35,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath        = "/Auth/Login";
         options.LogoutPath       = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
         options.Cookie.Name      = "Inmobiliaria.Auth";
         options.Cookie.HttpOnly  = true;
         options.SlidingExpiration = true;
         options.ExpireTimeSpan    = TimeSpan.FromHours(8);
     });
 
-builder.Services.AddAuthorization();
+// Configurar políticas de autorización
+builder.Services.AddAuthorization(options =>
+{
+    // Política para administradores solamente
+    options.AddPolicy("Administrador", policy => 
+        policy.RequireRole("Administrador"));
+});
 
 builder.Services.AddControllersWithViews();
 
@@ -76,7 +78,6 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
-// ⟵ Importante: primero Authentication, luego Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 

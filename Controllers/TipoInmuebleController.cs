@@ -1,9 +1,11 @@
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class TipoInmuebleController : Controller
     {
         private readonly ITipoInmuebleRepository _repo;
@@ -73,6 +75,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: TipoInmueble/Delete/5
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var tipo = await _repo.GetByIdAsync(id);
@@ -83,6 +86,7 @@ namespace Inmobiliaria.Controllers
         // POST: TipoInmueble/Delete/5 (soft delete)
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             await _repo.DeleteAsync(id);

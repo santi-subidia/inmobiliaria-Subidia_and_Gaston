@@ -6,6 +6,34 @@
 <h2>@ViewData["Title"]</h2>
 <h5 class="text-danger mb-4">¿Está seguro que desea rescindir este contrato?</h5>
 
+<!-- Mensajes de éxito y error -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        @TempData["Warning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <div class="card mb-4">
     <div class="card-body">
         <dl class="row mb-0">
@@ -46,10 +74,13 @@
 
 <form method="post" asp-action="RescindirConfirmed" asp-route-id="@Model.Id">
     @Html.AntiForgeryToken()
-    
+
+    <input type="hidden" name="fecha_fin_original" value="@Model.FechaFinOriginal.ToString("yyyy-MM-dd")" />
+    <input type="hidden" name="fecha_inicio" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" />
+
     <div class="mb-3">
         <label for="fechaFinEfectiva" class="form-label">Fecha de Rescisión Efectiva (opcional)</label>
-        <input type="date" id="fechaFinEfectiva" name="fechaFinEfectiva" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+        <input type="date" id="fechaFinEfectiva" name="fechaFinEfectiva" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" min="@DateTime.Now.ToString("yyyy-MM-dd")" max="@Model.FechaFinOriginal.AddDays(-1).ToString("yyyy-MM-dd")"/>
         <div class="form-text">
             Si no se especifica, se usará la fecha actual. La fecha original era: @Model.FechaFinOriginal.ToString("dd/MM/yyyy")
         </div>

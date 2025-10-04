@@ -88,5 +88,11 @@ namespace Inmobiliaria.Controllers
 
             return RedirectToAction("Index", "Home");
         }
+
+        [HttpGet, AllowAnonymous]
+        public IActionResult AccessDenied()
+        { 
+            return View();
+        }
     }
 }

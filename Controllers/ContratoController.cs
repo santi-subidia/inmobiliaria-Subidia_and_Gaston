@@ -1,11 +1,13 @@
 using Inmobiliaria.Data;
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class ContratoController : Controller
     {
         private readonly IContratoRepository _repo;
@@ -22,8 +24,8 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Contrato
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string? estado = null, 
-            long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, 
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string? estado = null,
+            long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null,
             DateOnly? fechaHasta = null, int? proximosVencer = null)
         {
             try
@@ -32,7 +34,7 @@ namespace Inmobiliaria.Controllers
                 if (proximosVencer.HasValue)
                 {
                     var proximosContratos = await _repo.GetProximosVencerAsync(proximosVencer.Value);
-                    
+
                     // Cargar datos relacionados
                     foreach (var contrato in proximosContratos)
                     {
@@ -41,7 +43,7 @@ namespace Inmobiliaria.Controllers
                         if (contrato.Inmueble != null)
                             contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
                     }
-                    
+
                     // Convertir a PagedResult
                     var totalProximos = proximosContratos.Count();
                     var itemsProximos = proximosContratos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -58,9 +60,16 @@ namespace Inmobiliaria.Controllers
                     return View(pagedProximos);
                 }
 
+                if (fechaDesde.HasValue && fechaHasta.HasValue && fechaDesde >= fechaHasta)
+                {
+                    fechaDesde = null;
+                    fechaHasta = null;
+                    TempData["Error"] = $"Error al cargar contratos: La fecha 'Desde' no puede ser mayor o igual que la fecha 'Hasta'.";
+                }
+
                 // Filtros normales con paginación
                 var (items, total) = await _repo.GetPagedWithFiltersAsync(page, pageSize, estado, propietarioId, inmuebleId, fechaDesde, fechaHasta);
-                
+
                 // Cargar datos relacionados para cada contrato
                 foreach (var contrato in items)
                 {
@@ -69,7 +78,7 @@ namespace Inmobiliaria.Controllers
                     if (contrato.Inmueble != null)
                         contrato.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contrato.Inmueble.PropietarioId);
                 }
-                
+
                 // Crear el modelo paginado
                 var model = new PagedResult<Contrato>
                 {
@@ -78,7 +87,7 @@ namespace Inmobiliaria.Controllers
                     PageSize = pageSize,
                     CurrentPage = page
                 };
-                
+
                 // Mantener filtros en ViewBag
                 ViewBag.FiltroEstado = estado;
                 ViewBag.FiltroPropietario = propietarioId;
@@ -104,7 +113,7 @@ namespace Inmobiliaria.Controllers
                 // Cargar listas para los filtros
                 var propietarios = await _propietarioRepo.GetAllAsync();
                 var inmuebles = await _inmuebleRepo.GetAllAsync();
-                
+
                 ViewBag.PropietariosLista = propietarios.OrderBy(p => p.Nombre).ToList();
                 ViewBag.InmueblesLista = inmuebles.OrderBy(i => i.Direccion).ToList();
             }
@@ -138,6 +147,7 @@ namespace Inmobiliaria.Controllers
         {
             if (ModelState.IsValid)
             {
+                contrato.CreadoPor =  long.Parse(User.Identity.Name);
                 await _repo.CreateAsync(contrato);
                 return RedirectToAction(nameof(Index));
             }
@@ -178,6 +188,7 @@ namespace Inmobiliaria.Controllers
         }
 
         // GET: Contrato/Delete/5
+        [Authorize(Policy="Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var contrato = await _repo.GetByIdAsync(id);
@@ -187,43 +198,46 @@ namespace Inmobiliaria.Controllers
 
         // POST: Contrato/Delete/5
         [HttpPost, ActionName("Delete")]
+        [Authorize(Policy = "Administrador")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(long id, long idUsuario)
+        public async Task<IActionResult> DeleteConfirmed(long id)
         {
+            var idUsuario = long.Parse(User.Identity.Name);
             await _repo.DeleteAsync(id, idUsuario);
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Contrato/Finalizar/5
-        public async Task<IActionResult> Finalizar(long id)
-        {
-            var contrato = await _repo.GetByIdAsync(id);
-            if (contrato == null) return NotFound();
+        // // GET: Contrato/Finalizar/5
+        // public async Task<IActionResult> Finalizar(long id)
+        // {
+        //     var contrato = await _repo.GetByIdAsync(id);
+        //     if (contrato == null) return NotFound();
 
-            if (!contrato.PuedeFinalizarse)
-            {
-                TempData["Error"] = "Este contrato no puede ser finalizado.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
+        //     if (!contrato.PuedeFinalizarse)
+        //     {
+        //         TempData["Error"] = "Este contrato no puede ser finalizado.";
+        //         return RedirectToAction(nameof(Details), new { id });
+        //     }
 
-            return View(contrato);
-        }
+        //     return View(contrato);
+        // }
 
-        // POST: Contrato/Finalizar/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> FinalizarConfirmed(long id, DateTime? fechaFinEfectiva)
-        {
-            var ok = await _repo.FinalizarContratoAsync(id, 1, fechaFinEfectiva); // Usuario temporalmente hardcodeado
-            if (!ok)
-            {
-                TempData["Error"] = "No se pudo finalizar el contrato.";
-                return RedirectToAction(nameof(Details), new { id });
-            }
+        // // POST: Contrato/Finalizar/5
+        // [HttpPost]
+        // [ValidateAntiForgeryToken]
+        // public async Task<IActionResult> FinalizarConfirmed(long id, DateTime? fechaFinEfectiva)
+        // {
+        //     var idUsuario = long.Parse(User.Identity.Name);
+        //     var ok = await _repo.FinalizarContratoAsync(id, idUsuario, fechaFinEfectiva);
+        //     if (!ok)
+        //     {
+        //         TempData["Error"] = "No se pudo finalizar el contrato.";
+        //         return RedirectToAction(nameof(Details), new { id });
+        //     }
 
-            TempData["Success"] = "Contrato finalizado exitosamente.";
-            return RedirectToAction(nameof(Index));
-        }
+        //     TempData["Success"] = "Contrato finalizado exitosamente.";
+        //     return RedirectToAction(nameof(Index));
+        // }
 
         // GET: Contrato/Rescindir/5
         public async Task<IActionResult> Rescindir(long id)
@@ -243,17 +257,35 @@ namespace Inmobiliaria.Controllers
         // POST: Contrato/Rescindir/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RescindirConfirmed(long id, DateTime? fechaFinEfectiva)
+        public async Task<IActionResult> RescindirConfirmed(long id, DateTime? fechaFinEfectiva, DateTime fecha_fin_original, DateTime fecha_inicio)
         {
-            var ok = await _repo.RescindirContratoAsync(id, 1, fechaFinEfectiva); // Usuario temporalmente hardcodeado
-            if (!ok)
+            // Validar que la fecha de fin efectiva no sea mayor a la fecha de fin original
+            if (fechaFinEfectiva.HasValue)
             {
-                TempData["Error"] = "No se pudo rescindir el contrato.";
-                return RedirectToAction(nameof(Details), new { id });
+                if (fechaFinEfectiva >= fecha_fin_original)
+                {
+                    TempData["Error"] = "La fecha de fin efectiva no puede ser mayor o igual a la fecha de fin original.";
+                    return RedirectToAction(nameof(Rescindir), new { id });
+                }
+                if (fechaFinEfectiva <= fecha_inicio)
+                {
+                    TempData["Error"] = "La fecha de fin efectiva no puede ser anterior o igual a la fecha de inicio del contrato.";
+                    return RedirectToAction(nameof(Rescindir), new { id });
+                }
             }
 
-            TempData["Success"] = "Contrato rescindido exitosamente.";
-            return RedirectToAction(nameof(Index));
+            {
+                var idUsuario = long.Parse(User.Identity.Name);
+                var ok = await _repo.RescindirContratoAsync(id, idUsuario, fechaFinEfectiva);
+                if (!ok)
+                {
+                    TempData["Error"] = "No se pudo rescindir el contrato.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                TempData["Success"] = "Contrato rescindido exitosamente.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // GET: Contrato/PorInquilino/5
@@ -307,7 +339,7 @@ namespace Inmobiliaria.Controllers
             }
 
             var contratos = await _repo.GetVigentesEnRangoAsync(fechaDesde.Value, fechaHasta.Value);
-            
+
             foreach (var contrato in contratos)
             {
                 contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
@@ -319,7 +351,7 @@ namespace Inmobiliaria.Controllers
             ViewBag.FechaDesde = fechaDesde;
             ViewBag.FechaHasta = fechaHasta;
             ViewData["Title"] = $"Contratos Vigentes ({fechaDesde:dd/MM/yyyy} - {fechaHasta:dd/MM/yyyy})";
-            
+
             return View("Index", contratos);
         }
 
@@ -347,7 +379,7 @@ namespace Inmobiliaria.Controllers
         public async Task<IActionResult> ProximosVencerFlex(int dias = 30)
         {
             var contratos = await _repo.GetProximosAVencerAsync(dias);
-            
+
             foreach (var contrato in contratos)
             {
                 contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
@@ -381,7 +413,7 @@ namespace Inmobiliaria.Controllers
             // Cargar datos del inmueble e inquilino
             contratoAnterior.Inmueble = await _inmuebleRepo.GetByIdAsync(contratoAnterior.InmuebleId);
             contratoAnterior.Inquilino = await _inquilinoRepo.GetByIdAsync(contratoAnterior.InquilinoId);
-            
+
             if (contratoAnterior.Inmueble?.PropietarioId != null)
             {
                 contratoAnterior.Inmueble.Propietario = await _propietarioRepo.GetByIdAsync(contratoAnterior.Inmueble.PropietarioId);
@@ -419,7 +451,7 @@ namespace Inmobiliaria.Controllers
             try
             {
                 // Verificar que no haya conflictos de fechas con otros contratos
-                var inmuebleDisponible = await VerificarDisponibilidadInmueble(nuevoContrato.InmuebleId, 
+                var inmuebleDisponible = await VerificarDisponibilidadInmueble(nuevoContrato.InmuebleId,
                     nuevoContrato.FechaInicio, nuevoContrato.FechaFinOriginal, null);
 
                 if (!inmuebleDisponible)
@@ -429,11 +461,11 @@ namespace Inmobiliaria.Controllers
                 }
 
                 // Establecer datos adicionales
-                nuevoContrato.CreadoPor = 1; // TODO: Usar usuario actual
+                nuevoContrato.CreadoPor = long.Parse(User.Identity.Name);
                 nuevoContrato.CreadoAt = DateTime.UtcNow;
 
                 var id = await _repo.CreateAsync(nuevoContrato);
-                
+
                 TempData["Success"] = $"Contrato renovado exitosamente. Nuevo contrato ID: {id}";
                 return RedirectToAction(nameof(Details), new { id = id });
             }
@@ -448,7 +480,7 @@ namespace Inmobiliaria.Controllers
         private async Task<bool> VerificarDisponibilidadInmueble(long inmuebleId, DateOnly fechaInicio, DateOnly fechaFin, long? excepto = null)
         {
             var contratos = await _repo.GetByInmuebleIdAsync(inmuebleId);
-            
+
             foreach (var contrato in contratos)
             {
                 if (excepto.HasValue && contrato.Id == excepto.Value)
@@ -458,7 +490,7 @@ namespace Inmobiliaria.Controllers
                 if (contrato.Estado() == "VIGENTE")
                 {
                     var finEfectiva = contrato.FechaFinEfectiva ?? contrato.FechaFinOriginal;
-                    
+
                     // Verificar superposición de fechas
                     if (!(fechaFin < contrato.FechaInicio || fechaInicio > finEfectiva))
                     {
@@ -466,7 +498,7 @@ namespace Inmobiliaria.Controllers
                     }
                 }
             }
-            
+
             return true; // Sin conflictos
         }
 
@@ -476,17 +508,19 @@ namespace Inmobiliaria.Controllers
             try
             {
                 var disponible = await VerificarDisponibilidadInmueble(inmuebleId, fechaInicio, fechaFin);
-                
-                return Json(new { 
+
+                return Json(new
+                {
                     disponible = disponible,
                     mensaje = disponible ? "Inmueble disponible para las fechas seleccionadas" : "El inmueble no está disponible en ese período"
                 });
             }
             catch (Exception ex)
             {
-                return Json(new { 
-                    disponible = false, 
-                    mensaje = $"Error al verificar disponibilidad: {ex.Message}" 
+                return Json(new
+                {
+                    disponible = false,
+                    mensaje = $"Error al verificar disponibilidad: {ex.Message}"
                 });
             }
         }

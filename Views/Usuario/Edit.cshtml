@@ -2,23 +2,438 @@
 @{
     ViewData["Title"] = "Editar Usuario";
 }
-<h2>@ViewData["Title"]</h2>
 
-<form asp-action="Edit" method="post" class="card card-body">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="Id" />
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-edit me-2"></i>
+                        <h4 class="mb-0">@ViewData["Title"]</h4>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-    <!-- mismos campos que Create -->
-    <!-- ... -->
-    <div class="mb-3">
-        <label class="form-label">Nueva contraseña (opcional)</label>
-        <input name="newPassword" type="password" class="form-control" />
-        <div class="form-text">Dejar vacío para no cambiar.</div>
+                    <form asp-action="Edit" method="post" novalidate>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="PasswordHash" />
+                        <input type="hidden" asp-for="AvatarUrl" />
+                        <input type="hidden" asp-for="CreatedAt" />
+                        
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="row">
+                            <!-- Información Personal -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-user me-2"></i>Información Personal
+                                </h5>
+                                
+                                <div class="mb-3">
+                                    <label asp-for="Nombre" class="form-label fw-bold">
+                                        <i class="fas fa-user me-1"></i>Nombre *
+                                    </label>
+                                    <input asp-for="Nombre" class="form-control" placeholder="Ingrese el nombre" />
+                                    <span asp-validation-for="Nombre" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Apellido" class="form-label fw-bold">
+                                        <i class="fas fa-user me-1"></i>Apellido *
+                                    </label>
+                                    <input asp-for="Apellido" class="form-control" placeholder="Ingrese el apellido" />
+                                    <span asp-validation-for="Apellido" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label fw-bold">
+                                        <i class="fas fa-envelope me-1"></i>Email *
+                                    </label>
+                                    <input asp-for="Email" type="email" class="form-control" placeholder="ejemplo@correo.com" />
+                                    <span asp-validation-for="Email" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <!-- Información de Contacto y Sistema -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-cog me-2"></i>Configuración
+                                </h5>
+                                
+                                <div class="mb-3">
+                                    <label asp-for="Telefono" class="form-label fw-bold">
+                                        <i class="fas fa-phone me-1"></i>Teléfono
+                                    </label>
+                                    <input asp-for="Telefono" type="tel" class="form-control" placeholder="+54 11 1234-5678" />
+                                    <span asp-validation-for="Telefono" class="text-danger small"></span>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>Formato: +54 11 1234-5678 (opcional)
+                                    </div>
+                                </div>
+
+                                @if (ViewBag.CanChangePassword == true)
+                                {
+                                    <div class="mb-4">
+                                        <h6 class="text-warning mb-3">
+                                            <i class="fas fa-shield-alt me-2"></i>Cambio de Contraseña (Solo Administradores)
+                                        </h6>
+                                        
+                                        <div class="mb-3">
+                                            <label for="newPassword" class="form-label fw-bold">
+                                                <i class="fas fa-key me-1"></i>Nueva Contraseña
+                                            </label>
+                                            <input type="password" id="newPassword" name="newPassword" class="form-control" placeholder="Dejar vacío para mantener la actual" />
+                                            <span id="newPasswordError" class="text-danger small"></span>
+                                            <div class="form-text">
+                                                <i class="fas fa-info-circle me-1"></i>Solo completar si desea cambiar la contraseña. Mínimo 6 caracteres.
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="confirmPassword" class="form-label fw-bold">
+                                                <i class="fas fa-key me-1"></i>Confirmar Nueva Contraseña
+                                            </label>
+                                            <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" placeholder="Confirmar nueva contraseña" />
+                                            <span id="confirmPasswordError" class="text-danger small"></span>
+                                            <div id="passwordMatchMessage" class="form-text"></div>
+                                        </div>
+
+                                        <div class="alert alert-warning" role="alert">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>Importante:</strong> Solo los administradores pueden cambiar contraseñas desde esta vista. 
+                                            Los usuarios pueden cambiar su propia contraseña desde su perfil.
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (ViewBag.CanEditRole == true)
+                                {
+                                    <div class="mb-3">
+                                        <label asp-for="RolId" class="form-label fw-bold">
+                                            <i class="fas fa-user-tag me-1"></i>Rol *
+                                        </label>
+                                        <select asp-for="RolId" class="form-select">
+                                            <option value="">Seleccionar rol...</option>
+                                            <option value="1">Administrador</option>
+                                            <option value="2">Empleado</option>
+                                        </select>
+                                        <span asp-validation-for="RolId" class="text-danger small"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input asp-for="IsActive" class="form-check-input" role="switch" />
+                                            <label asp-for="IsActive" class="form-check-label fw-bold">
+                                                <i class="fas fa-toggle-on me-1"></i>Usuario Activo
+                                            </label>
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>Los usuarios inactivos no pueden iniciar sesión
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="fas fa-user-tag me-1"></i>Rol
+                                        </label>
+                                        <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                            <i class="fas fa-shield-alt text-muted me-2"></i>
+                                            @(Model.RolId == 1 ? "Administrador" : "Empleado")
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>Solo los administradores pueden cambiar roles
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Estado</label>
+                                        <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                            <span class="badge @(Model.IsActive ? "bg-success" : "bg-danger")">
+                                                <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-times-circle")"></i>
+                                                @(Model.IsActive ? "Activo" : "Inactivo")
+                                            </span>
+                                            <input type="hidden" asp-for="RolId" value="@Model.RolId" />
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>Solo los administradores pueden cambiar el estado
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Información de Solo Lectura -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5 class="text-muted mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>Información del Sistema
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded">
+                                            <label class="form-label fw-bold text-muted">ID de Usuario</label>
+                                            <div class="fw-bold">#@Model.Id</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded">
+                                            <label class="form-label fw-bold text-muted">Fecha de Creación</label>
+                                            <div class="fw-bold">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded">
+                                            <label class="form-label fw-bold text-muted">Última Actualización</label>
+                                            <div class="fw-bold">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nota sobre Contraseña y Avatar -->
+                        <div class="alert alert-info mt-4" role="alert">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Nota:</strong> Para cambiar la contraseña o el avatar, utilice las opciones disponibles en la 
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="alert-link">
+                                <i class="fas fa-user me-1"></i>vista de perfil
+                            </a>.
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Guardar Cambios
+                            </button>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info px-4">
+                                <i class="fas fa-user me-2"></i>Ver Perfil
+                            </a>
+                            @if (ViewBag.CanEditRole == true)
+                            {
+                                <a asp-action="Index" class="btn btn-secondary px-4">
+                                    <i class="fas fa-arrow-left me-2"></i>Volver al Listado
+                                </a>
+                            }
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <div class="mt-3">
-        <button class="btn btn-primary">Guardar</button>
-        <a asp-action="Index" class="btn btn-secondary">Volver</a>
-    </div>
-</form>
+@section Styles {
+    <style>
+        /* Estilos para campos de contraseña */
+        .password-field {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .password-toggle:hover {
+            color: #495057;
+        }
+        
+        .form-control.is-valid {
+            border-color: #198754;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.94-.94 1.44 1.45 3.06-3.08L8.5 5 4.7 8.8 2.3 6.73z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6 2.4 2.4-2.4 2.4'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        
+        .form-text {
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+        
+        .form-text i {
+            font-size: 0.9em;
+        }
+    </style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        // Validación en tiempo real
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const inputs = form.querySelectorAll('input[required], select[required]');
+            const newPasswordInput = document.getElementById('newPassword');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const passwordMatchMessage = document.getElementById('passwordMatchMessage');
+            const newPasswordError = document.getElementById('newPasswordError');
+            const confirmPasswordError = document.getElementById('confirmPasswordError');
+
+            // Mostrar errores del servidor si existen
+            @if (ViewData.ModelState.ContainsKey("newPassword") && ViewData.ModelState["newPassword"]!.Errors.Count > 0)
+            {
+                <text>
+                if (newPasswordError && newPasswordInput) {
+                    newPasswordError.textContent = '@Html.Raw(ViewData.ModelState["newPassword"]!.Errors[0].ErrorMessage)';
+                    newPasswordInput.classList.add('is-invalid');
+                }
+                </text>
+            }
+
+            @if (ViewData.ModelState.ContainsKey("confirmPassword") && ViewData.ModelState["confirmPassword"]!.Errors.Count > 0)
+            {
+                <text>
+                if (confirmPasswordError && confirmPasswordInput) {
+                    confirmPasswordError.textContent = '@Html.Raw(ViewData.ModelState["confirmPassword"]!.Errors[0].ErrorMessage)';
+                    confirmPasswordInput.classList.add('is-invalid');
+                }
+                </text>
+            }
+            
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    validateField(this);
+                });
+                
+                input.addEventListener('input', function() {
+                    if (this.classList.contains('is-invalid')) {
+                        validateField(this);
+                    }
+                });
+            });
+            
+            function validateField(field) {
+                const isValid = field.checkValidity();
+                field.classList.toggle('is-valid', isValid && field.value.trim() !== '');
+                field.classList.toggle('is-invalid', !isValid);
+            }
+
+            // Validación de contraseñas
+            function validatePasswords() {
+                if (!newPasswordInput || !confirmPasswordInput) return;
+
+                const newPassword = newPasswordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                // Limpiar clases previas y errores del servidor
+                newPasswordInput.classList.remove('is-valid', 'is-invalid');
+                confirmPasswordInput.classList.remove('is-valid', 'is-invalid');
+                passwordMatchMessage.innerHTML = '';
+                if (newPasswordError) newPasswordError.textContent = '';
+                if (confirmPasswordError) confirmPasswordError.textContent = '';
+
+                // Si ambos campos están vacíos, no validar
+                if (!newPassword && !confirmPassword) {
+                    passwordMatchMessage.innerHTML = '<i class="fas fa-info-circle text-muted me-1"></i>Dejar vacío para mantener la contraseña actual';
+                    return;
+                }
+
+                // Validar longitud mínima
+                if (newPassword && newPassword.length < 6) {
+                    newPasswordInput.classList.add('is-invalid');
+                    passwordMatchMessage.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i>La contraseña debe tener al menos 6 caracteres';
+                    return;
+                }
+
+                // Validar que las contraseñas coincidan
+                if (newPassword && confirmPassword) {
+                    if (newPassword === confirmPassword) {
+                        newPasswordInput.classList.add('is-valid');
+                        confirmPasswordInput.classList.add('is-valid');
+                        passwordMatchMessage.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Las contraseñas coinciden';
+                    } else {
+                        newPasswordInput.classList.add('is-invalid');
+                        confirmPasswordInput.classList.add('is-invalid');
+                        passwordMatchMessage.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i>Las contraseñas no coinciden';
+                    }
+                } else if (newPassword && !confirmPassword) {
+                    newPasswordInput.classList.add('is-valid');
+                    passwordMatchMessage.innerHTML = '<i class="fas fa-info-circle text-warning me-1"></i>Confirme la nueva contraseña';
+                }
+            }
+
+            // Event listeners para validación de contraseñas
+            if (newPasswordInput && confirmPasswordInput) {
+                newPasswordInput.addEventListener('input', validatePasswords);
+                confirmPasswordInput.addEventListener('input', validatePasswords);
+                newPasswordInput.addEventListener('blur', validatePasswords);
+                confirmPasswordInput.addEventListener('blur', validatePasswords);
+            }
+
+            // Validación antes del envío del formulario
+            form.addEventListener('submit', function(e) {
+                if (newPasswordInput && confirmPasswordInput) {
+                    const newPassword = newPasswordInput.value;
+                    const confirmPassword = confirmPasswordInput.value;
+
+                    // Si hay contraseña nueva, validar
+                    if (newPassword || confirmPassword) {
+                        if (newPassword !== confirmPassword) {
+                            e.preventDefault();
+                            confirmPasswordInput.classList.add('is-invalid');
+                            passwordMatchMessage.innerHTML = '<i class="fas fa-times-circle text-danger me-1"></i>Las contraseñas no coinciden';
+                            confirmPasswordInput.focus();
+                            return false;
+                        }
+                        
+                        if (newPassword.length < 6) {
+                            e.preventDefault();
+                            newPasswordInput.classList.add('is-invalid');
+                            passwordMatchMessage.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i>La contraseña debe tener al menos 6 caracteres';
+                            newPasswordInput.focus();
+                            return false;
+                        }
+                    }
+                }
+            });
+            
+            // Auto-dismiss alerts
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert-dismissible');
+                alerts.forEach(alert => {
+                    const closeBtn = alert.querySelector('.btn-close');
+                    if (closeBtn) closeBtn.click();
+                });
+            }, 5000);
+        });
+    </script>
+}

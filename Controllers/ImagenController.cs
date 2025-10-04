@@ -1,9 +1,11 @@
 using Inmobiliaria.Models;
 using Inmobiliaria.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inmobiliaria.Controllers
 {
+    [Authorize]
     public class ImagenController : Controller
     {
         private readonly IImagenRepository _imagenRepo;
@@ -115,7 +117,7 @@ namespace Inmobiliaria.Controllers
                     return RedirectToAction("GaleriaInmueble", new { inmuebleId });
                 }
             }
-            
+
             TempData["Success"] = "Imágenes agregadas a la galería correctamente.";
             return RedirectToAction("GaleriaInmueble", new { inmuebleId });
         }
@@ -183,16 +185,16 @@ namespace Inmobiliaria.Controllers
                     // Nombre del archivo: solo el ID del inmueble + extensión
                     string fileName = file.InmuebleId + Path.GetExtension(file.Archivo.FileName);
                     string rutaFisicaCompleta = Path.Combine(path, fileName);
-                    
+
                     using (var stream = new FileStream(rutaFisicaCompleta, FileMode.Create))
                     {
                         await file.Archivo.CopyToAsync(stream);
                     }
-                    
+
                     file.Url = $"/Uploads/{fileName}";
                 }
                 else
-                { 
+                {
                     file.Url = string.Empty;
                 }
 

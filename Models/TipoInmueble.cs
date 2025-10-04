@@ -18,6 +18,9 @@ namespace Inmobiliaria.Models
         [Display(Name = "Descripción")]
         public string? Descripcion { get; set; }
 
+        [Display(Name = "Activo")]
+        public bool Activo { get; set; } = true;
+
         [Required]
         [DataType(DataType.DateTime)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

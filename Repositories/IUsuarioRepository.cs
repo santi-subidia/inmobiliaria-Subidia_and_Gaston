@@ -12,5 +12,6 @@ namespace Inmobiliaria.Repositories
         Task<long> CreateAsync(Usuario u);
         Task<bool> UpdateAsync(Usuario u);
         Task<bool> DeleteAsync(long id);
+        Task<bool> UpdateFechaEliminacionAsync(long id);
     }
 }

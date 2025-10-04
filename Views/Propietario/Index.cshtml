@@ -1,6 +1,7 @@
 @model PagedResult<Inmobiliaria.Models.Propietario>
 @{
     ViewData["Title"] = "Propietarios";
+    bool isAdmin = User.IsInRole("Administrador");
 }
 
 <h2 class="mb-3">@ViewData["Title"]</h2>
@@ -64,7 +65,10 @@
                         <div class="btn-group" role="group">
                             <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-outline-secondary btn-sm">Ver</a>
                             <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-primary btn-sm">Editar</a>
-                            <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-outline-danger btn-sm">Eliminar</a>
+                            @if (isAdmin)
+                            {
+                                <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-outline-danger btn-sm">Eliminar</a>
+                            }
                         </div>
                     </td>
                 </tr>

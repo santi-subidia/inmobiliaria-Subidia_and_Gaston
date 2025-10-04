@@ -4,44 +4,87 @@
 }
 <h2>@ViewData["Title"]</h2>
 
-<form asp-action="Create" method="post">
+<!-- Formulario de verificación de DNI -->
+<form id="dniForm" autocomplete="off" onsubmit="return verificarDni(event)">
+    <div class="mb-3">
+        <label for="dniVerificar" class="form-label">DNI</label>
+        <input type="text" id="dniVerificar" name="dniVerificar" class="form-control" required />
+        <div id="dniError" class="text-danger"></div>
+        <div id="dniMensaje" class="text-info"></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Verificar</button>
+    <button onclick="window.history.back()" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver Atrás
+    </button>
+</form>
+
+<!-- Formulario de alta de Propietario -->
+<form id="altaForm" asp-action="Create" method="post" style="display:none;">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="mb-3">
         <label asp-for="Dni" class="form-label"></label>
-        <input asp-for="Dni" class="form-control"/>
+        <input asp-for="Dni" class="form-control" id="Dni" readonly />
         <span asp-validation-for="Dni" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Apellido" class="form-label"></label>
-        <input asp-for="Apellido" class="form-control"/>
+        <input asp-for="Apellido" class="form-control" />
         <span asp-validation-for="Apellido" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Nombre" class="form-label"></label>
-        <input asp-for="Nombre" class="form-control"/>
+        <input asp-for="Nombre" class="form-control" />
         <span asp-validation-for="Nombre" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Telefono" class="form-label"></label>
-        <input asp-for="Telefono" class="form-control"/>
+        <input asp-for="Telefono" class="form-control" />
         <span asp-validation-for="Telefono" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Email" class="form-label"></label>
-        <input asp-for="Email" class="form-control"/>
+        <input asp-for="Email" class="form-control" />
         <span asp-validation-for="Email" class="text-danger"></span>
     </div>
 
-   <button type="submit" class="btn btn-primary">Guardar</button>
+    <button type="submit" class="btn btn-primary">Guardar</button>
     <a asp-action="Index" class="btn btn-secondary">Volver</a>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        async function verificarDni(event) {
+            event.preventDefault();
+            const dni = document.getElementById('dniVerificar').value.trim();
+            if (!dni) return false;
+
+            // Llamada real al backend
+            let date = null;
+            try {
+                const response = await fetch(`/Propietario/ExisteDni?dni=${encodeURIComponent(dni)}`);
+                date = await response.json();
+            } catch (e) {
+                document.getElementById('dniError').innerText = 'Error al verificar el DNI.';
+                return false;
+            }
+            if (date) {
+                document.getElementById('dniMensaje').innerText = date.mensaje;
+                return false;
+            } else {
+                document.getElementById('dniMensaje').innerText = '';
+                document.getElementById('altaForm').style.display = '';
+                document.getElementById('dniForm').style.display = 'none';
+                document.getElementById('Dni').value = dni;
+                document.getElementById('Dni').readOnly = true;
+            }
+            return false;
+        }
+    </script>
 }

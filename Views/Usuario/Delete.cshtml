@@ -1,0 +1,113 @@
+@model Inmobiliaria.Models.Usuario
+@{
+    ViewData["Title"] = "Eliminar usuario";
+}
+
+<h2 class="text-danger">
+    <i class="fas fa-exclamation-triangle"></i> @ViewData["Title"]
+</h2>
+
+<div class="alert alert-danger border-danger">
+    <div class="d-flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+        </div>
+        <div class="flex-grow-1 ms-3">
+            <h5 class="alert-heading">⚠️ ADVERTENCIA - Acción irreversible</h5>
+            <p class="mb-2">¿Está seguro de que desea eliminar este usuario del sistema?</p>
+            <hr>
+            <div class="mb-0">
+                <strong>Usuario a eliminar:</strong> <span class="text-dark">@Model.Nombre @Model.Apellido</span><br>
+                <strong>Email:</strong> <span class="text-dark">@Model.Email</span><br>
+                <strong>Rol:</strong> <span class="badge bg-primary">@Model.RolName</span><br>
+                <strong>Estado:</strong> 
+                @if (Model.IsActive)
+                {
+                    <span class="badge bg-success">Activo</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Inactivo</span>
+                }
+                <br>
+                <strong>Creado:</strong> <span class="text-dark">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-warning">
+    <i class="fas fa-info-circle"></i>
+    <strong>Importante:</strong> 
+    <ul class="mb-0 mt-2">
+        <li>Esta acción eliminará permanentemente el usuario del sistema</li>
+        <li>Se perderá el acceso a la cuenta de forma inmediata</li>
+        <li>Los registros asociados (contratos, pagos, etc.) mantendrán la referencia histórica</li>
+        <li>Esta operación no se puede deshacer</li>
+    </ul>
+</div>
+
+@{
+    var currentUserId = long.Parse(User.Identity!.Name!);
+    var isSelfDelete = currentUserId == Model.Id;
+}
+
+@if (isSelfDelete)
+{
+    <div class="alert alert-danger">
+        <i class="fas fa-ban"></i>
+        <strong>Error:</strong> No puedes eliminar tu propia cuenta. Contacta a otro administrador para realizar esta acción.
+    </div>
+    
+    <div class="mt-4">
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la lista
+        </a>
+    </div>
+}
+else
+{
+    <form asp-action="Delete" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id"/>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Está COMPLETAMENTE seguro de eliminar este usuario? Esta acción no se puede deshacer.');">
+                <i class="fas fa-trash"></i> Confirmar eliminación definitiva
+            </button>
+            <a asp-action="Index" class="btn btn-secondary ms-2">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info ms-2">
+                <i class="fas fa-eye"></i> Ver detalles
+            </a>
+        </div>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        // Agregar confirmación adicional para la eliminación de usuarios
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteForm = document.querySelector('form[asp-action="Delete"]');
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', function(e) {
+                    const userName = '@Html.Raw(Model.Nombre + " " + Model.Apellido)';
+                    const confirmMessage = `ÚLTIMA CONFIRMACIÓN\n\n¿Eliminar definitivamente al usuario "${userName}"?\n\nEsta acción NO se puede deshacer.`;
+                    
+                    if (!confirm(confirmMessage)) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    
+                    // Cambiar el texto del botón para mostrar que está procesando
+                    const submitBtn = e.target.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+                        submitBtn.disabled = true;
+                    }
+                });
+            }
+        });
+    </script>
+}

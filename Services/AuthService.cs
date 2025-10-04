@@ -58,12 +58,20 @@ namespace Inmobiliaria.Services
 
         public ClaimsPrincipal CreatePrincipal(Usuario u)
         {
+            var roleName = u.RolId switch
+            {
+                1 => "Administrador",
+                2 => "Empleado",
+                _ => "Usuario"
+            };
+
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, u.Id.ToString()),
-                new(ClaimTypes.Name, u.Email),
+                new(ClaimTypes.Name, u.Id.ToString()),
                 new("full_name", u.NombreCompleto),
+                new(ClaimTypes.Role, roleName),
                 new("role_id", u.RolId.ToString()),
+                new("avatar_url", u.AvatarUrl ?? ""),
             };
 
             var identity = new ClaimsIdentity(claims, "Cookies");

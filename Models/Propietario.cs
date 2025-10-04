@@ -41,8 +41,8 @@ namespace Inmobiliaria.Models
 
         [Display(Name = "Teléfono")]
         [StringLength(20, ErrorMessage = "El teléfono no puede exceder los 20 caracteres")]
-        [RegularExpression(@"^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$", 
-            ErrorMessage = "Formato de teléfono inválido. Ej: +54 11 1234-5678")]
+        [RegularExpression(@"^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$",
+            ErrorMessage = "Formato de teléfono inválido. Ej: 2664-123456")]
         [Column("telefono")]
         public string? Telefono { get; set; }
 
@@ -50,7 +50,7 @@ namespace Inmobiliaria.Models
         [Display(Name = "Email")]
         [EmailAddress(ErrorMessage = "Formato de email inválido")]
         [StringLength(100, ErrorMessage = "El email no puede exceder los 100 caracteres")]
-        [RegularExpression(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", 
+        [RegularExpression(@"^[^@\s]+@[^@\s]+\.[^@\s]+$",
             ErrorMessage = "Formato de email inválido. Debe ser: usuario@dominio.com")]
         [Column("email")]
         public string? Email { get; set; }
@@ -59,5 +59,17 @@ namespace Inmobiliaria.Models
         [DataType(DataType.DateTime)]
         [Column("fecha_eliminacion")]
         public DateTime? FechaEliminacion { get; set; }
+
+        public static Propietario PropietarioFromInquilino(Inquilino inquilino)
+        {
+            return new Propietario
+            {
+                Dni = inquilino.Dni,
+                Apellido = inquilino.Apellido,
+                Nombre = inquilino.Nombre,
+                Telefono = inquilino.Telefono,
+                Email = inquilino.Email,
+            };
+        }
     }
 }

@@ -7,49 +7,53 @@ namespace Inmobiliaria.Models
     [Table("usuarios")]
     public class Usuario
     {
-        [Key, Column("id")]
+        [Key]
         public long Id { get; set; }
 
         [Required, StringLength(255)]
         [EmailAddress]
-        [Column("email")]
         public string Email { get; set; } = string.Empty;
 
         [Required, StringLength(255)]
-        [Column("password_hash")]
+        [Display(Name = "Contraseña")]
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required, StringLength(100)]
-        [Column("nombre")]
+        [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El nombre solo puede contener letras y espacios")]
         public string Nombre { get; set; } = string.Empty;
 
         [Required, StringLength(100)]
-        [Column("apellido")]
+        [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El apellido solo puede contener letras y espacios")]
         public string Apellido { get; set; } = string.Empty;
 
-        [StringLength(50)]
-        [Column("telefono")]
+        [StringLength(20, ErrorMessage = "El teléfono no puede exceder los 20 caracteres")]
+        [RegularExpression(@"^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$", ErrorMessage = "El teléfono no tiene un formato válido")]
         public string? Telefono { get; set; }
 
         [StringLength(500)]
-        [Url]
-        [Column("avatar_url")]
+        [Url(ErrorMessage = "La URL del avatar no es válida")]
         public string? AvatarUrl { get; set; }
 
         [Required]
-        [Column("rol_id")]
-        public int RolId { get; set; } // FK a rol_usuarios(id)
+        public int RolId { get; set; }
 
-        [Column("is_active")]
         public bool IsActive { get; set; } = true;
 
-        [Required, Column("created_at")]
+        public DateOnly? FechaEliminacion { get; set; }
+
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [Required, Column("updated_at")]
+        [Required]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        [NotMapped]
         public string NombreCompleto => $"{Nombre} {Apellido}";
+
+        public string RolName => RolId switch
+        {
+            1 => "Administrador",
+            2 => "Empleado",
+            _ => "Usuario"
+        };
     }
 }

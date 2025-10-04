@@ -34,7 +34,7 @@ namespace Inmobiliaria.Models
         [Display(Name = "Teléfono")]
         [StringLength(20, ErrorMessage = "El teléfono no puede exceder los 20 caracteres")]
         [RegularExpression(@"^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$", 
-            ErrorMessage = "Formato de teléfono inválido. Ej: +54 11 1234-5678")]
+            ErrorMessage = "Formato de teléfono inválido. Ej: 2664-123456")]
         public string? Telefono { get; set; }
 
         [Required(ErrorMessage = "El email es obligatorio")]

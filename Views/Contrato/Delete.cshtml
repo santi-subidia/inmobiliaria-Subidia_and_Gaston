@@ -110,10 +110,6 @@
 
             <form method="post" asp-action="Delete" asp-route-id="@Model.Id">
                 @Html.AntiForgeryToken()
-                
-                <!-- Campo oculto para el ID del usuario que realiza la eliminación -->
-                <input type="hidden" name="idUsuario" value="1" />
-
                 <div class="d-flex gap-2 justify-content-end">
                     <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Cancelar

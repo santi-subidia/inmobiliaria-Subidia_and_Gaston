@@ -1,0 +1,389 @@
+@model Inmobiliaria.Models.Usuario
+@{
+    ViewData["Title"] = "Mi Perfil";
+}
+
+<div class="container-fluid">
+    <!-- Mensajes de TempData -->
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @success
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @error
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Warning"] is string warning)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i> @warning
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Info"] is string info)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle"></i> @info
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Sidebar del perfil -->
+        <div class="col-lg-4 col-xl-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <!-- Avatar del usuario -->
+                    <div class="mb-4">
+                        @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                        {
+                            <img src="@Model.AvatarUrl" alt="Avatar de @Model.NombreCompleto"
+                                class="rounded-circle img-fluid profile-avatar"
+                                style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #f8f9fa;">
+                        }
+                        else
+                        {
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center profile-avatar-placeholder"
+                                style="width: 150px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 4px solid #f8f9fa;">
+                                <i class="fas fa-user fa-4x text-white"></i>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Nombre completo -->
+                    <h4 class="mb-1">@Model.NombreCompleto</h4>
+                    <p class="text-muted mb-3">@Model.Email</p>
+
+                    <!-- Estado del usuario -->
+                    <div class="mb-3">
+                        <span class="badge @(Model.IsActive ? "bg-success" : "bg-danger") fs-6">
+                            <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-times-circle")"></i>
+                            @(Model.IsActive ? "Activo" : "Inactivo")
+                        </span>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="d-grid gap-2">
+                        @if (ViewBag.CanEdit == true)
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                                <i class="fas fa-edit"></i> Editar Perfil
+                            </a>
+                        }
+                        
+                        @if (ViewBag.IsOwnProfile == true)
+                        {
+                            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal"
+                                data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key"></i> Cambiar Contraseña
+                            </button>
+                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal"
+                                data-bs-target="#changeAvatarModal">
+                                <i class="fas fa-camera"></i> Cambiar Avatar
+                            </button>
+                        }
+                        
+                        @if (ViewBag.CanEdit == true && ViewBag.IsOwnProfile != true)
+                        {
+                            <div class="alert alert-info small mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Visualizando perfil como administrador
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido principal del perfil -->
+        <div class="col-lg-8 col-xl-9">
+            <!-- Información personal -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-circle text-primary"></i> Información Personal
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Nombre</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-user text-muted me-2"></i>
+                                @Model.Nombre
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Apellido</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-user text-muted me-2"></i>
+                                @Model.Apellido
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Email</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-envelope text-muted me-2"></i>
+                                @Model.Email
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Teléfono</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-phone text-muted me-2"></i>
+                                @(Model.Telefono ?? "No especificado")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de la cuenta -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog text-info"></i> Información de la Cuenta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">ID de Usuario</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-hashtag text-muted me-2"></i>
+                                #@Model.Id
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Rol</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-shield-alt text-muted me-2"></i>
+                                @ViewBag.RolNombre
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Fecha de Registro</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-calendar-plus text-muted me-2"></i>
+                                @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Última Actualización</label>
+                            <div class="form-control-plaintext border rounded px-3 py-2 bg-light">
+                                <i class="fas fa-clock text-muted me-2"></i>
+                                @Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cambiar contraseña -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">
+                    <i class="fas fa-key"></i> Cambiar Contraseña
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="ChangePassword" method="post">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@Model.Id" />
+
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Contraseña Actual</label>
+                        <input type="password" class="form-control" id="currentPassword" name="currentPassword"
+                            required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" required
+                            minlength="6">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirmar Nueva Contraseña</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+                            required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Cambiar Contraseña
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cambiar avatar -->
+<div class="modal fade" id="changeAvatarModal" tabindex="-1" aria-labelledby="changeAvatarModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changeAvatarModalLabel">
+                    <i class="fas fa-camera"></i> Cambiar Avatar
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="ChangeAvatar" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@Model.Id" />
+
+                    <div class="text-center mb-4">
+                        <div id="avatarPreview">
+                            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                            {
+                                <img src="@Model.AvatarUrl" alt="Avatar actual" class="rounded-circle"
+                                    style="width: 100px; height: 100px; object-fit: cover;">
+                            }
+                            else
+                            {
+                                <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                                    style="width: 100px; height: 100px; background: #e9ecef;">
+                                    <i class="fas fa-user fa-2x text-muted"></i>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="avatarFile" class="form-label">Seleccionar nueva imagen</label>
+                        <input type="file" class="form-control" id="avatarFile" name="avatarFile" accept="image/*"
+                            onchange="previewAvatar(this)">
+                        <div class="form-text">
+                            Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 2MB.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger me-auto" onclick="eliminarAvatar()">
+                        <i class="fas fa-trash"></i> Eliminar Avatar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Avatar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Previsualizar avatar seleccionado
+        function previewAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('avatarPreview').innerHTML =
+                        `<img src="${e.target.result}" alt="Vista previa" class="rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Validar confirmación de contraseña
+        document.getElementById('confirmPassword').addEventListener('input', function () {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = this.value;
+
+            if (newPassword !== confirmPassword) {
+                this.setCustomValidity('Las contraseñas no coinciden');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+
+        // Función para eliminar avatar
+        function eliminarAvatar() {
+            // Crear un formulario temporal para enviar solo el userId
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '@Url.Action("ChangeAvatar")';
+
+            // Agregar token antiforgery
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '__RequestVerificationToken';
+            tokenInput.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            form.appendChild(tokenInput);
+
+            // Agregar userId
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'userId';
+            userIdInput.value = '@Model.Id';
+            form.appendChild(userIdInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function () {
+            $('.alert-dismissible').alert('close');
+        }, 5000);
+    </script>
+
+    <style>
+        .profile-avatar {
+            transition: transform 0.3s ease;
+        }
+
+        .profile-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .timeline-item {
+            position: relative;
+        }
+
+        .timeline-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 40px;
+            width: 2px;
+            height: calc(100% - 10px);
+            background: #e9ecef;
+        }
+
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid rgba(0, 0, 0, 0.125);
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        }
+
+        .form-control-plaintext {
+            background-color: #f8f9fa !important;
+        }
+    </style>
+}

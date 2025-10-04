@@ -10,12 +10,12 @@
     <div class="row">
         <div class="col-md-6 mb-3">
             <label for="fechaInicio" class="form-label">Fecha de Inicio</label>
-            <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" required />
+            <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" required />
             <div id="fechaError" class="text-danger"></div>
         </div>
         <div class="col-md-6 mb-3">
             <label for="cantidadMeses" class="form-label">Cantidad de Meses</label>
-            <input type="number" id="cantidadMeses" name="cantidadMeses" class="form-control" required />
+            <input type="number" id="cantidadMeses" name="cantidadMeses" class="form-control" min="1" max="48" value="12" required />
             <div id="cantidadMesesError" class="text-danger"></div>
         </div>
         <div id="fechaMensaje" class="text-info"></div>
@@ -118,7 +118,7 @@
                             const a = document.createElement("a");
                             a.href = "#";
                             a.className = "list-group-item list-group-item-action";
-                            a.textContent = item.nombreCompleto; // Asumiendo que el backend envía nombreCompleto
+                            a.textContent = item.nombreCompleto;
 
                             a.addEventListener("click", e => {
                                 e.preventDefault();
@@ -175,7 +175,7 @@
             if (isNaN(fechaInicio.getTime())) {
                 fechaErrorDiv.innerText = 'Fecha de inicio inválida.';
                 valid = false;
-            } else if (fechaInicio < hoy) {
+            } else if (fechaInicio <= hoy) {
                 fechaErrorDiv.innerText = 'La fecha de inicio no puede ser en el pasado.';
                 valid = false;
             }

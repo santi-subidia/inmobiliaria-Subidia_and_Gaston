@@ -53,12 +53,13 @@ namespace Inmobiliaria.Repositories
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
             const string sql = @"
-INSERT INTO tipos_inmueble (nombre, descripcion, created_at, updated_at, fecha_eliminacion)
-VALUES (@nombre, @descripcion, @created_at, @updated_at, @fecha_eliminacion);
+INSERT INTO tipos_inmueble (nombre, descripcion, activo, created_at, updated_at, fecha_eliminacion)
+VALUES (@nombre, @descripcion, @activo, @created_at, @updated_at, @fecha_eliminacion);
 SELECT LAST_INSERT_ID();";
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@nombre", t.Nombre);
             cmd.Parameters.AddWithValue("@descripcion", (object?)t.Descripcion ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@activo", t.Activo);
             cmd.Parameters.AddWithValue("@created_at", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@fecha_eliminacion", DBNull.Value);
@@ -72,12 +73,13 @@ SELECT LAST_INSERT_ID();";
             await conn.OpenAsync();
             const string sql = @"
 UPDATE tipos_inmueble
-SET nombre=@nombre, descripcion=@descripcion, updated_at=@updated_at
+SET nombre=@nombre, descripcion=@descripcion, activo=@activo, updated_at=@updated_at
 WHERE id=@id AND fecha_eliminacion IS NULL;";
             using var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", t.Id);
             cmd.Parameters.AddWithValue("@nombre", t.Nombre);
             cmd.Parameters.AddWithValue("@descripcion", (object?)t.Descripcion ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@activo", t.Activo);
             cmd.Parameters.AddWithValue("@updated_at", DateTime.UtcNow);
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -106,11 +108,25 @@ WHERE id=@id AND fecha_eliminacion IS NULL;";
             return rows > 0;
         }
 
+        public async Task<IEnumerable<TipoInmueble>> GetActivosAsync()
+        {
+            var list = new List<TipoInmueble>();
+            using var conn = _connectionFactory.CreateConnection();
+            await conn.OpenAsync();
+            const string sql = "SELECT * FROM tipos_inmueble WHERE fecha_eliminacion IS NULL AND activo = 1 ORDER BY nombre";
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                list.Add(Map(reader));
+            return list;
+        }
+
         private static TipoInmueble Map(MySqlDataReader r) => new()
         {
             Id = r.GetInt32("id"),
             Nombre = r.GetString("nombre"),
             Descripcion = r.IsDBNull(r.GetOrdinal("descripcion")) ? null : r.GetString("descripcion"),
+            Activo = r.GetBoolean("activo"),
             CreatedAt = r.GetDateTime("created_at"),
             UpdatedAt = r.GetDateTime("updated_at"),
             FechaEliminacion = r.IsDBNull(r.GetOrdinal("fecha_eliminacion")) ? null : r.GetDateTime("fecha_eliminacion")

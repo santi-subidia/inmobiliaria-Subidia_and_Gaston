@@ -1,6 +1,7 @@
 @model PagedResult<Inmobiliaria.Models.Contrato>
 @{
     ViewData["Title"] = "Contratos";
+    bool isAdmin = User.IsInRole("Administrador");
 }
 <h2 class="mb-3">@ViewData["Title"]</h2>
 
@@ -10,10 +11,39 @@
     </div>
 </div>
 
-<!-- Filtros avanzados -->
+<!-- Reporte de Contratos Vigentes por Fechas -->
+<div class="card mb-3 border-success">
+    <div class="card-header bg-success text-white">
+        <h6 class="mb-0"><i class="fas fa-calendar-check"></i> Contratos Vigentes por Rango de Fechas</h6>
+    </div>
+    <div class="card-body">
+        <form id="vigentesForm" method="get" asp-action="Index" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="fechaDesdeVigentes" class="form-label">Fecha Desde</label>
+                <input type="date" name="fechaDesde" id="fechaDesdeVigentes" class="form-control" 
+                       value="@(ViewBag.FechaDesde != null ? ((DateOnly)ViewBag.FechaDesde).ToString("yyyy-MM-dd") : "")" />
+            </div>
+            <div class="col-md-4">
+                <label for="fechaHastaVigentes" class="form-label">Fecha Hasta</label>
+                <input type="date" name="fechaHasta" id="fechaHastaVigentes" class="form-control" 
+                       value="@(ViewBag.FechaHasta != null ? ((DateOnly)ViewBag.FechaHasta).ToString("yyyy-MM-dd") : "")" />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-search"></i> Ver Contratos Vigentes
+                </button>
+            </div>
+        </form>
+        <small class="text-muted">
+            <i class="fas fa-info-circle"></i> Muestra todos los contratos que estuvieron vigentes en el rango de fechas seleccionado, la columna estado en la tabla corresponde al estado actual del contrato.
+        </small>
+    </div>
+</div>
+
+<!-- Filtros Generales -->
 <div class="card mb-4">
     <div class="card-header">
-        <h6 class="mb-0"><i class="fas fa-filter"></i> Filtros y Reportes</h6>
+        <h6 class="mb-0"><i class="fas fa-filter"></i> Filtros Generales</h6>
     </div>
     <div class="card-body">
         <form id="filterForm" method="get" class="row g-3 align-items-end">
@@ -21,7 +51,7 @@
             <input type="hidden" name="page" value="1" />
             
             <!-- Estado -->
-            <div class="col-md-2">
+            <div class="col-md-4">
                 <label for="estado" class="form-label">Estado</label>
                 <select name="estado" id="estado" class="form-select">
                     <option value="">Todos</option>
@@ -53,7 +83,7 @@
             </div>
 
             <!-- Propietario -->
-            <div class="col-md-2">
+            <div class="col-md-4">
                 <label for="propietarioId" class="form-label">Propietario</label>
                 <select name="propietarioId" id="propietarioId" class="form-select">
                     <option value="">Todos</option>
@@ -75,7 +105,7 @@
             </div>
 
             <!-- Inmueble -->
-            <div class="col-md-2">
+            <div class="col-md-4">
                 <label for="inmuebleId" class="form-label">Inmueble</label>
                 <select name="inmuebleId" id="inmuebleId" class="form-select">
                     <option value="">Todos</option>
@@ -95,20 +125,6 @@
                     }
                 </select>
             </div>
-
-            @* <!-- Fecha Desde -->
-            <div class="col-md-2">
-                <label for="fechaDesde" class="form-label">Desde</label>
-                <input type="date" name="fechaDesde" id="fechaDesde" class="form-control" 
-                       value="@(ViewBag.FechaDesde != null ? ((DateOnly)ViewBag.FechaDesde).ToString("yyyy-MM-dd") : "")" />
-            </div>
-
-            <!-- Fecha Hasta -->
-            <div class="col-md-2">
-                <label for="fechaHasta" class="form-label">Hasta</label>
-                <input type="date" name="fechaHasta" id="fechaHasta" class="form-control" 
-                       value="@(ViewBag.FechaHasta != null ? ((DateOnly)ViewBag.FechaHasta).ToString("yyyy-MM-dd") : "")" />
-            </div> *@
         </form>
 
         <!-- Filtros rápidos -->
@@ -261,7 +277,10 @@
                                 <a asp-controller="Pago" asp-action="IndexByContrato" asp-route-id="@contrato.Id" class="btn btn-outline-success btn-sm">Ver pagos</a>
                                 <a asp-action="Renovar" asp-route-id="@contrato.Id" class="btn btn-outline-primary btn-sm">Renovar</a>
                             }
-                            <a asp-action="Delete" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Eliminar</a>
+                            @if (isAdmin)
+                            {
+                                <a asp-action="Delete" asp-route-id="@contrato.Id" class="btn btn-outline-warning btn-sm">Eliminar</a>
+                            }
                         </div>
                     </td>
                 </tr>
