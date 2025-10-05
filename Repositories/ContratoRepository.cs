@@ -399,6 +399,7 @@ namespace Inmobiliaria.Repositories
             string sql = $@"
                 UPDATE contratos c
                 SET c.finalizado_por = @finalizado_por,
+                    c.finalizado_at = NOW(),
                     c.fecha_fin_efectiva = @fecha_fin_efectiva
                 WHERE c.id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
                 
@@ -566,8 +567,9 @@ namespace Inmobiliaria.Repositories
                 FechaFinOriginal = DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_original")),
                 FechaFinEfectiva = reader.IsDBNull(reader.GetOrdinal("fecha_fin_efectiva")) ? null : DateOnly.FromDateTime(reader.GetDateTime("fecha_fin_efectiva")),
                 MontoMensual = reader.GetDecimal("monto_mensual"),
-                CreadoPor = reader.IsDBNull(reader.GetOrdinal("creado_por")) ? null : reader.GetInt64("creado_por"),
+                CreadoPor = reader.GetInt64("creado_por"),
                 CreadoAt = reader.GetDateTime("creado_at"),
+                FinalizadoAt = reader.IsDBNull(reader.GetOrdinal("finalizado_at")) ? null : reader.GetDateTime("finalizado_at"),
                 FinalizadoPor = reader.IsDBNull(reader.GetOrdinal("finalizado_por")) ? null : reader.GetInt64("finalizado_por"),
                 FechaEliminacion = reader.IsDBNull(reader.GetOrdinal("fecha_eliminacion")) ? null : reader.GetDateTime("fecha_eliminacion")
             };

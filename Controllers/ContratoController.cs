@@ -14,13 +14,15 @@ namespace Inmobiliaria.Controllers
         private readonly IInquilinoRepository _inquilinoRepo;
         private readonly IInmuebleRepository _inmuebleRepo;
         private readonly IPropietarioRepository _propietarioRepo;
+        private readonly IUsuarioRepository _usuarioRepo;
 
-        public ContratoController(IContratoRepository repo, IInquilinoRepository inquilinoRepo, IInmuebleRepository inmuebleRepo, IPropietarioRepository propietarioRepo)
+        public ContratoController(IContratoRepository repo, IInquilinoRepository inquilinoRepo, IInmuebleRepository inmuebleRepo, IPropietarioRepository propietarioRepo, IUsuarioRepository usuarioRepo)
         {
             _repo = repo;
             _inquilinoRepo = inquilinoRepo;
             _inmuebleRepo = inmuebleRepo;
             _propietarioRepo = propietarioRepo;
+            _usuarioRepo = usuarioRepo;
         }
 
         // GET: Contrato
@@ -129,6 +131,14 @@ namespace Inmobiliaria.Controllers
         public async Task<IActionResult> Details(long id)
         {
             var contrato = await _repo.GetByIdAsync(id);
+            var inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
+            var creador = await _usuarioRepo.GetByIdAsync(contrato.CreadoPor);
+            var finalizador = contrato.FinalizadoPor.HasValue ? await _usuarioRepo.GetByIdAsync(contrato.FinalizadoPor.Value) : null;
+
+            contrato.Inmueble = inmueble;
+            contrato.Creador = creador;
+            contrato.Finalizador = finalizador;
+            
             if (contrato == null) return NotFound();
             return View(contrato);
         }

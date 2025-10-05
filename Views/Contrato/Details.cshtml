@@ -107,12 +107,17 @@
                         <dd class="col-sm-6">@Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")</dd>
 
                         <dt class="col-sm-6">Creado por</dt>
-                        <dd class="col-sm-6">Usuario #@Model.CreadoPor</dd>
+                        <dd class="col-sm-6">Usuario: #@Model.CreadoPor <br>
+                                            Nombre: @Model.Creador?.NombreCompleto</dd>
 
-                        @if (Model.FinalizadoPor.HasValue)
+                        @if (Model.Finalizador != null)
                         {
-                            <dt class="col-sm-6">Finalizado por</dt>
-                            <dd class="col-sm-6">Usuario #@Model.FinalizadoPor</dd>
+                            <dt class="col-sm-6">Rescindido</dt>
+                            <dd class="col-sm-6">@Model.FinalizadoAt?.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-6">Rescindido por</dt>
+                            <dd class="col-sm-6">Usuario: #@Model.FinalizadoPor <br>
+                                                Nombre: @Model.Finalizador?.NombreCompleto</dd>
                         }
                     </dl>
                 </div>

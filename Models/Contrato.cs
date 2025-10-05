@@ -40,7 +40,7 @@ namespace Inmobiliaria.Models
         [Display(Name = "Estado")]
         public String Estado()
         {
-            if (FechaFinEfectiva.HasValue && FechaFinEfectiva < FechaFinOriginal)
+            if (FechaFinEfectiva.HasValue && FechaFinEfectiva < FechaFinOriginal && FechaFinEfectiva < DateOnly.FromDateTime(DateTime.Now))
             {
                 return "RESCINDIDO";
             }
@@ -54,14 +54,16 @@ namespace Inmobiliaria.Models
             }
         }
 
-        //[Required(ErrorMessage = "El creador es obligatorio")]
+        [Required(ErrorMessage = "El creador es obligatorio")]
         [Display(Name = "Creado por")]
-        public long? CreadoPor { get; set; }
+        public long CreadoPor { get; set; }
 
         [Required]
         [Display(Name = "Fecha de Creación")]
         [DataType(DataType.DateTime)]
         public DateTime CreadoAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? FinalizadoAt { get; set; }
 
         [Display(Name = "Finalizado por")]
         public long? FinalizadoPor { get; set; }
@@ -72,8 +74,8 @@ namespace Inmobiliaria.Models
 
         public Inquilino? Inquilino { get; set; }
         public Inmueble? Inmueble { get; set; }
-        //public Usuario? Creador { get; set; }
-        //public Usuario? Finalizador { get; set; }
+        public Usuario? Creador { get; set; }
+        public Usuario? Finalizador { get; set; }
 
         public int DuracionEnMeses (DateOnly fechaPost) =>
             ((fechaPost.Year - FechaInicio.Year) * 12) +
