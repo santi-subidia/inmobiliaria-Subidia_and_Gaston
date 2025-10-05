@@ -43,63 +43,6 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, string? tipoEstado = null, bool noEliminado = true)
-        {
-            var list = new List<Contrato>();
-
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-
-            // Construir WHERE dinámicamente
-            var whereClause = "";
-
-            if (!string.IsNullOrEmpty(tipoEstado)) {
-                if (tipoEstado.ToUpper() == "VIGENTE") {
-                    whereClause = $"AND {VigenteSQL}";
-                } else if (tipoEstado.ToUpper() == "FINALIZADO") {
-                    whereClause = $"AND {FinalizadoSQL}";
-                } else if (tipoEstado.ToUpper() == "RESCINDIDO") {
-                    whereClause = $"AND {RescindidoSQL}";
-                }
-            }
-
-            if (noEliminado) {
-                whereClause += $" AND {NoEliminadoSQL}";
-            }
-
-            string sql = $@"
-                SELECT SQL_CALC_FOUND_ROWS c.*, i.dni, i.apellido, i.nombre 
-                FROM contratos c 
-                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE 1=1
-                {whereClause}
-                ORDER BY c.creado_at DESC
-                LIMIT @pageSize OFFSET @offset;
-                SELECT FOUND_ROWS();";
-
-            using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@pageSize", pageSize);
-            cmd.Parameters.AddWithValue("@offset", (page - 1) * pageSize);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-
-            // --- 1° resultado: la página de datos ---
-            while (await reader.ReadAsync())
-            {
-                list.Add(MapContrato(reader));
-            }
-
-            // --- 2° resultado: total de registros ---
-            await reader.NextResultAsync();
-            int total = 0;
-            if (await reader.ReadAsync())
-            {
-                total = reader.GetInt32(0);
-            }
-
-            return (list, total);
-        }
-
         public async Task<Contrato?> GetByIdAsync(long id)
         {
             using var conn = _connectionFactory.CreateConnection();
@@ -191,72 +134,6 @@ namespace Inmobiliaria.Repositories
             return list;
         }
 
-        public async Task<IEnumerable<Contrato>> GetVigentesAsync()
-        {
-            var list = new List<Contrato>();
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            string sql = $@"
-                SELECT c.*, i.dni, i.apellido, i.nombre 
-                FROM contratos c 
-                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE {VigenteSQL} AND {NoEliminadoSQL}
-                ORDER BY c.fecha_inicio DESC";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                list.Add(MapContrato(reader));
-            }
-            return list;
-        }
-
-        public async Task<IEnumerable<Contrato>> GetFinalizadosAsync()
-        {
-            var list = new List<Contrato>();
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            string sql = $@"
-                SELECT c.*, i.dni, i.apellido, i.nombre 
-                FROM contratos c 
-                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE {FinalizadoSQL} AND {NoEliminadoSQL}
-                ORDER BY c.fecha_inicio DESC";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                list.Add(MapContrato(reader));
-            }
-            return list;
-        }
-
-        public async Task<IEnumerable<Contrato>> GetRescindidosAsync()
-        {
-            var list = new List<Contrato>();
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            string sql = $@"
-                SELECT c.*, i.dni, i.apellido, i.nombre 
-                FROM contratos c 
-                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE {RescindidoSQL} AND {NoEliminadoSQL}
-                ORDER BY c.fecha_inicio DESC";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                list.Add(MapContrato(reader));
-            }
-            return list;
-        }
-
         public async Task<IEnumerable<Contrato>> GetProximosAVencerAsync(int dias = 30)
         {
             var list = new List<Contrato>();
@@ -280,26 +157,6 @@ namespace Inmobiliaria.Repositories
                 list.Add(MapContrato(reader));
             }
             return list;
-        }
-
-        public async Task<Contrato?> GetContratoVigenteByInmuebleAsync(long inmuebleId)
-        {
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            string sql = $@"
-                SELECT c.*, i.dni, i.apellido, i.nombre 
-                FROM contratos c 
-                LEFT JOIN inquilinos i ON c.inquilino_id = i.id
-                WHERE c.inmueble_id = @inmuebleId AND {VigenteSQL} AND {NoEliminadoSQL}
-                LIMIT 1";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@inmuebleId", inmuebleId);
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-                return MapContrato(reader);
-            return null;
         }
 
         public async Task<long> CreateAsync(Contrato contrato)
@@ -369,28 +226,7 @@ namespace Inmobiliaria.Repositories
             return rows > 0;
         }
 
-        public async Task<bool> FinalizarContratoAsync(long id, long finalizadoPor, DateTime? fechaFinEfectiva = null)
-        {
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            // Solo verificamos que esté vigente usando la lógica de fechas y actualizamos las fechas
-            string sql = $@"
-                UPDATE contratos c
-                SET c.finalizado_por = @finalizado_por,
-                    c.fecha_fin_efectiva = COALESCE(@fecha_fin_efectiva, c.fecha_fin_efectiva, CURDATE())
-                WHERE c.id = @id AND {VigenteSQL} AND {NoEliminadoSQL}";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@id", id);
-            cmd.Parameters.AddWithValue("@finalizado_por", finalizadoPor);
-            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"));
-            
-            var rows = await cmd.ExecuteNonQueryAsync();
-            return rows > 0;
-        }
-
-        public async Task<bool> RescindirContratoAsync(long id, long finalizadoPor, DateTime? fechaFinEfectiva = null)
+        public async Task<bool> RescindirContratoAsync(long id, long finalizadoPor, DateTime fechaFinEfectiva)
         {
             using var conn = _connectionFactory.CreateConnection();
             await conn.OpenAsync();
@@ -406,43 +242,10 @@ namespace Inmobiliaria.Repositories
             var cmd = new MySqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.Parameters.AddWithValue("@finalizado_por", finalizadoPor);
-            // Para rescisión usamos la fecha proporcionada o hoy si es anterior a la original
-            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@fecha_fin_efectiva", fechaFinEfectiva.ToString("yyyy-MM-dd"));
             
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
-        }
-
-        public async Task<bool> ExisteContratoVigenteParaInmuebleAsync(long inmuebleId)
-        {
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            string sql = $@"
-                SELECT COUNT(*) FROM contratos c
-                WHERE c.inmueble_id = @inmuebleId AND {VigenteSQL} AND {NoEliminadoSQL}";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@inmuebleId", inmuebleId);
-            
-            var count = await cmd.ExecuteScalarAsync();
-            return Convert.ToInt32(count) > 0;
-        }
-
-        public async Task<bool> ExisteContratoVigenteParaInquilinoAsync(long inquilinoId)
-        {
-            using var conn = _connectionFactory.CreateConnection();
-            await conn.OpenAsync();
-            
-            string sql = $@"
-                SELECT COUNT(*) FROM contratos c
-                WHERE c.inquilino_id = @inquilinoId AND {VigenteSQL} AND {NoEliminadoSQL}";
-                
-            var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@inquilinoId", inquilinoId);
-            
-            var count = await cmd.ExecuteScalarAsync();
-            return Convert.ToInt32(count) > 0;
         }
 
         public async Task<(IEnumerable<Contrato> Items, int TotalCount)> GetPagedWithFiltersAsync(int page, int pageSize, string? tipoEstado = null, long? propietarioId = null, long? inmuebleId = null, DateOnly? fechaDesde = null, DateOnly? fechaHasta = null)

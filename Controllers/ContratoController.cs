@@ -138,7 +138,7 @@ namespace Inmobiliaria.Controllers
             contrato.Inmueble = inmueble;
             contrato.Creador = creador;
             contrato.Finalizador = finalizador;
-            
+
             if (contrato == null) return NotFound();
             return View(contrato);
         }
@@ -146,7 +146,6 @@ namespace Inmobiliaria.Controllers
         // GET: Contrato/Create
         public IActionResult Create()
         {
-            PrepareViewBagsAsync();
             return View();
         }
 
@@ -157,12 +156,11 @@ namespace Inmobiliaria.Controllers
         {
             if (ModelState.IsValid)
             {
-                contrato.CreadoPor =  long.Parse(User.Identity.Name);
+                contrato.CreadoPor = long.Parse(User.Identity.Name);
                 await _repo.CreateAsync(contrato);
                 return RedirectToAction(nameof(Index));
             }
 
-            PrepareViewBagsAsync();
             return View(contrato);
         }
 
@@ -175,7 +173,6 @@ namespace Inmobiliaria.Controllers
             contrato.Inquilino = await _inquilinoRepo.GetByIdAsync(contrato.InquilinoId);
             contrato.Inmueble = await _inmuebleRepo.GetByIdAsync(contrato.InmuebleId);
 
-            PrepareViewBagsAsync();
             return View(contrato);
         }
 
@@ -193,12 +190,11 @@ namespace Inmobiliaria.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            PrepareViewBagsAsync();
             return View(contrato);
         }
 
         // GET: Contrato/Delete/5
-        [Authorize(Policy="Administrador")]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Delete(long id)
         {
             var contrato = await _repo.GetByIdAsync(id);
@@ -216,38 +212,6 @@ namespace Inmobiliaria.Controllers
             await _repo.DeleteAsync(id, idUsuario);
             return RedirectToAction(nameof(Index));
         }
-
-        // // GET: Contrato/Finalizar/5
-        // public async Task<IActionResult> Finalizar(long id)
-        // {
-        //     var contrato = await _repo.GetByIdAsync(id);
-        //     if (contrato == null) return NotFound();
-
-        //     if (!contrato.PuedeFinalizarse)
-        //     {
-        //         TempData["Error"] = "Este contrato no puede ser finalizado.";
-        //         return RedirectToAction(nameof(Details), new { id });
-        //     }
-
-        //     return View(contrato);
-        // }
-
-        // // POST: Contrato/Finalizar/5
-        // [HttpPost]
-        // [ValidateAntiForgeryToken]
-        // public async Task<IActionResult> FinalizarConfirmed(long id, DateTime? fechaFinEfectiva)
-        // {
-        //     var idUsuario = long.Parse(User.Identity.Name);
-        //     var ok = await _repo.FinalizarContratoAsync(id, idUsuario, fechaFinEfectiva);
-        //     if (!ok)
-        //     {
-        //         TempData["Error"] = "No se pudo finalizar el contrato.";
-        //         return RedirectToAction(nameof(Details), new { id });
-        //     }
-
-        //     TempData["Success"] = "Contrato finalizado exitosamente.";
-        //     return RedirectToAction(nameof(Index));
-        // }
 
         // GET: Contrato/Rescindir/5
         public async Task<IActionResult> Rescindir(long id)
@@ -267,22 +231,19 @@ namespace Inmobiliaria.Controllers
         // POST: Contrato/Rescindir/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RescindirConfirmed(long id, DateTime? fechaFinEfectiva, DateTime fecha_fin_original, DateTime fecha_inicio)
+        public async Task<IActionResult> RescindirConfirmed(long id, DateTime fechaFinEfectiva, DateTime fecha_fin_original, DateTime fecha_inicio)
         {
-            // Validar que la fecha de fin efectiva no sea mayor a la fecha de fin original
-            if (fechaFinEfectiva.HasValue)
+            if (fechaFinEfectiva >= fecha_fin_original)
             {
-                if (fechaFinEfectiva >= fecha_fin_original)
-                {
-                    TempData["Error"] = "La fecha de fin efectiva no puede ser mayor o igual a la fecha de fin original.";
-                    return RedirectToAction(nameof(Rescindir), new { id });
-                }
-                if (fechaFinEfectiva <= fecha_inicio)
-                {
-                    TempData["Error"] = "La fecha de fin efectiva no puede ser anterior o igual a la fecha de inicio del contrato.";
-                    return RedirectToAction(nameof(Rescindir), new { id });
-                }
+                TempData["Error"] = "La fecha de fin efectiva no puede ser mayor o igual a la fecha de fin original.";
+                return RedirectToAction(nameof(Rescindir), new { id });
             }
+            if (fechaFinEfectiva <= fecha_inicio)
+            {
+                TempData["Error"] = "La fecha de fin efectiva no puede ser anterior o igual a la fecha de inicio del contrato.";
+                return RedirectToAction(nameof(Rescindir), new { id });
+            }
+
 
             {
                 var idUsuario = long.Parse(User.Identity.Name);
@@ -317,25 +278,6 @@ namespace Inmobiliaria.Controllers
             var inmueblesDisponibles = await _inmuebleRepo.GetAllbyFechasAsync(fechaInicio, fechaFin, contratoId);
 
             return Json(new { inmuebles = inmueblesDisponibles });
-        }
-
-        private void PrepareViewBagsAsync()
-        {
-            // var inquilinos = await _inquilinoRepo.GetAllAsync();
-            // if (inquilino != null)
-            // {
-            //     inquilinos.ToList().Add(inquilino);
-            // }
-            // ViewBag.InquilinoId = new SelectList(inquilinos, "Id", "NombreCompleto");
-
-            // var inmuebles = (await _inmuebleRepo.GetAllWithFiltersAsync(disponible: true)).ToList();
-            // if (inmueble != null)
-            // {
-            //     inmuebles.Add(inmueble);
-            // }
-            // ViewBag.InmuebleId = new SelectList(inmuebles, "Id", "Direccion");
-
-
         }
 
         // GET: Contrato/VigentesPorFecha

@@ -1,6 +1,13 @@
 @model Inmobiliaria.Models.Contrato
 @{
     ViewData["Title"] = "Rescindir Contrato";
+    // Verificar si la fecha de inicio es mayor a la fecha actual
+    bool fechaMayor = Model.FechaInicio > DateOnly.FromDateTime(DateTime.Now) ? true : false;
+    String minAndValue = DateTime.Now.ToString("yyyy-MM-dd");
+    if(fechaMayor){
+        minAndValue = Model.FechaInicio.AddDays(1).ToString("yyyy-MM-dd");
+    }
+
 }
 
 <h2>@ViewData["Title"]</h2>
@@ -80,10 +87,7 @@
 
     <div class="mb-3">
         <label for="fechaFinEfectiva" class="form-label">Fecha de Rescisión Efectiva (opcional)</label>
-        <input type="date" id="fechaFinEfectiva" name="fechaFinEfectiva" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" min="@DateTime.Now.ToString("yyyy-MM-dd")" max="@Model.FechaFinOriginal.AddDays(-1).ToString("yyyy-MM-dd")"/>
-        <div class="form-text">
-            Si no se especifica, se usará la fecha actual. La fecha original era: @Model.FechaFinOriginal.ToString("dd/MM/yyyy")
-        </div>
+        <input type="date" id="fechaFinEfectiva" name="fechaFinEfectiva" class="form-control" value="@minAndValue" min="@minAndValue" max="@Model.FechaFinOriginal.AddDays(-1).ToString("yyyy-MM-dd")"/>
     </div>
 
     <div class="alert alert-warning" role="alert">
