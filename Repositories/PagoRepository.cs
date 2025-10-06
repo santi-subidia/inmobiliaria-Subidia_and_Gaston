@@ -148,7 +148,7 @@ namespace Inmobiliaria.Repositories
             cmd.Parameters.AddWithValue("@concepto", p.Concepto);
             cmd.Parameters.AddWithValue("@importe", p.Importe);
             cmd.Parameters.AddWithValue("@estado", p.Estado ?? "Pendiente");
-            cmd.Parameters.AddWithValue("@creado_por", p.CreadoPorId ?? 1);
+            cmd.Parameters.AddWithValue("@creado_por", p.CreadoPorId);
             cmd.Parameters.AddWithValue("@creado_at", p.CreadoAt == default ? DateTime.UtcNow : p.CreadoAt);
             cmd.Parameters.AddWithValue("@anulado_por", (object?)p.AnuladoPorId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@anulado_at", (object?)p.AnuladoAt ?? DBNull.Value);

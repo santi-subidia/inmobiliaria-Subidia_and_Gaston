@@ -54,7 +54,7 @@ namespace Inmobiliaria.Models
         // Auditoría
         [Required]
         [Display(Name = "Creado por")]
-        public int? CreadoPorId { get; set; } = 1;
+        public int CreadoPorId { get; set; }
 
         [Required]
         [Display(Name = "Fecha de Creación")]
@@ -74,5 +74,7 @@ namespace Inmobiliaria.Models
         public string ImporteFormateado => Importe.ToString("C");
 
         public Contrato? contrato { get; set; }
+        public Usuario? creadoPor { get; set; }
+        public Usuario? anuladoPor { get; set; }
     }
 }

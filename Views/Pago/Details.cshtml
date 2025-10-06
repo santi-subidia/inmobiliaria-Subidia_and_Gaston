@@ -4,81 +4,216 @@
     bool esAdmin = User.IsInRole("Administrador");
 }
 
-<h2 class="mb-3">@ViewData["Title"]</h2>
+<h2 class="mb-4">@ViewData["Title"] - #@Model.Id</h2>
 
-@if (TempData["Msg"] is string msg)
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill-wave"></i> Información del Pago
+                    <span class="badge @(Model.Estado == "Pagado" ? "bg-success" : 
+                                         Model.Estado == "Pendiente" ? "bg-warning text-dark" : "bg-danger") ms-2">
+                        @Model.Estado
+                    </span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">ID del Pago</dt>
+                    <dd class="col-sm-8">#@Model.Id</dd>
+
+                    <dt class="col-sm-4">Contrato</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Contrato != null)
+                        {
+                            <strong>Contrato #@Model.ContratoId</strong>
+                            @if (Model.Contrato.Inquilino != null)
+                            {
+                                <br>
+                                <small class="text-muted">Inquilino: @Model.Contrato.Inquilino.NombreCompleto</small>
+                            }
+                            @if (Model.Contrato.Inmueble != null)
+                            {
+                                <br>
+                                <small class="text-muted">Inmueble: @Model.Contrato.Inmueble.Direccion</small>
+                            }
+                            <br>
+                            <a asp-controller="Contrato" asp-action="Details" asp-route-id="@Model.ContratoId"
+                                class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-file-contract"></i> Ver Contrato
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Contrato #@Model.ContratoId</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Número de Pago</dt>
+                    <dd class="col-sm-8"><strong>@Model.NumeroPago</strong></dd>
+
+                    <dt class="col-sm-4">Fecha de Pago</dt>
+                    <dd class="col-sm-8">@Model.FechaPago.ToString("dd/MM/yyyy")</dd>
+
+                    <dt class="col-sm-4">Concepto</dt>
+                    <dd class="col-sm-8">@Model.Concepto</dd>
+
+                    <dt class="col-sm-4">Importe</dt>
+                    <dd class="col-sm-8">
+                        <strong class="@(Model.Estado == "Anulado" ? "text-decoration-line-through text-muted" : "text-success")">
+                            @Model.Importe.ToString("C")
+                        </strong>
+                    </dd>
+
+                    <dt class="col-sm-4">Estado del Pago</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Estado == "Pagado")
+                        {
+                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> Pagado</span>
+                        }
+                        else if (Model.Estado == "Pendiente")
+                        {
+                            <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pendiente</span>
+                        }
+                        else if (Model.Estado == "Anulado")
+                        {
+                            <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Anulado</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@Model.Estado</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        @if (esAdmin)
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Información de Auditoría</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-6">Creado</dt>
+                        <dd class="col-sm-6">@Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-6">Creado por</dt>
+                        <dd class="col-sm-6">
+                            @if (Model.creadoPor != null)
+                            {
+                                <span>Usuario: #@Model.CreadoPorId</span><br>
+                                <span>@Model.creadoPor.NombreCompleto</span>
+                            }
+                            else
+                            {
+                                <span>Usuario #@Model.CreadoPorId</span>
+                            }
+                        </dd>
+
+                        @if (Model.AnuladoAt.HasValue)
+                        {
+                            <dt class="col-sm-6">Anulado</dt>
+                            <dd class="col-sm-6">@Model.AnuladoAt?.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-6">Anulado por</dt>
+                            <dd class="col-sm-6">
+                                @if (Model.anuladoPor != null)
+                                {
+                                    <span>Usuario: #@Model.AnuladoPorId</span><br>
+                                    <span>@Model.anuladoPor.NombreCompleto</span>
+                                }
+                                else
+                                {
+                                    <span>Usuario #@Model.AnuladoPorId</span>
+                                }
+                            </dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        }
+
+        <!-- Acciones disponibles -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> Acciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    @if (!Model.EstaAnulado)
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Editar Concepto
+                        </a>
+                        
+                        <form asp-action="Delete" method="post" style="display: inline;" 
+                              onsubmit="return confirm('¿Está seguro de que desea anular este pago? Esta acción no se puede deshacer.');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="contratoId" value="@Model.ContratoId" />
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="fas fa-ban"></i> Anular Pago
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i> Este pago ha sido anulado y no se puede modificar
+                        </div>
+                    }
+
+                    <hr>
+                    <a asp-action="IndexByContrato" asp-route-id="@Model.ContratoId" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver a Pagos del Contrato
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-info">
+                        <i class="fas fa-list"></i> Ver Todos los Pagos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mensajes de TempData -->
+@if (TempData["Success"] != null)
 {
-    <div class="alert alert-info">@msg</div>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i>
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
 
-<dl class="row">
-    <dt class="col-sm-3">Contrato</dt>      <dd class="col-sm-9">#@Model.ContratoId</dd>
-    <dt class="col-sm-3">N° Pago</dt>       <dd class="col-sm-9">@Model.NumeroPago</dd>
-    <dt class="col-sm-3">Fecha</dt>         <dd class="col-sm-9">@Model.FechaPago.ToString("dd/MM/yyyy")</dd>
-    <dt class="col-sm-3">Concepto</dt>      <dd class="col-sm-9">@Model.Concepto</dd>
-    <dt class="col-sm-3">Importe</dt>       <dd class="col-sm-9">@Model.Importe.ToString("C")</dd>
-    <dt class="col-sm-3">Estado</dt>        <dd class="col-sm-9">
-        @if(Model.Estado == "Pendiente")
-        {
-            <span class="badge bg-warning text-dark">@Model.Estado</span>
-        }
-        else if(Model.Estado == "Pagado")
-        {
-            <span class="badge bg-success">@Model.Estado</span>
-        }
-        else if(Model.Estado == "Anulado")
-        {
-            <span class="badge bg-danger">@Model.Estado</span>
-        }
-        else
-        {
-            <span class="badge bg-secondary">@Model.Estado</span>
-        }
-    </dd>
-    @if(esAdmin){
-        <dt class="col-sm-3">Creado por</dt>    <dd class="col-sm-9">Usuario #@Model.CreadoPorId</dd>
-        <dt class="col-sm-3">Creado</dt>        <dd class="col-sm-9">@Model.CreadoAt.ToString("dd/MM/yyyy HH:mm")</dd>
-        @if (Model.AnuladoAt.HasValue)
-        {
-            <dt class="col-sm-3">Anulado por</dt> <dd class="col-sm-9">Usuario #@Model.AnuladoPorId</dd>
-            <dt class="col-sm-3">Anulado</dt>     <dd class="col-sm-9">@Model.AnuladoAt?.ToString("dd/MM/yyyy HH:mm")</dd>
-        }
-    }
-</dl>
-
-<div class="mt-4">
-    <div class="btn-group" role="group">
-        @if (!Model.EstaAnulado)
-        {
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
-                <i class="bi bi-pencil"></i> Editar Concepto
-            </a>
-        }
-        <a asp-action="IndexByContrato" asp-route-id="@Model.ContratoId" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Volver a Pagos
-        </a>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    
-    @if (!Model.EstaAnulado)
-    {
-        <div class="mt-2">
-            <form asp-action="AnularPago" method="post" style="display: inline;" 
-                  onsubmit="return confirm('¿Está seguro de que desea anular este pago? Esta acción no se puede deshacer.');">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="contratoId" value="@Model.ContratoId" />
-                <button type="submit" class="btn btn-outline-danger">
-                    <i class="bi bi-x-circle"></i> Anular Pago
-                </button>
-            </form>
-        </div>
-    }
-    else
-    {
-        <div class="mt-2">
-            <span class="text-muted">
-                <i class="bi bi-info-circle"></i> Este pago ha sido anulado y no se puede modificar
-            </span>
-        </div>
-    }
-</div>
+}
+
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle"></i>
+        @TempData["Warning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Info"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-info-circle"></i>
+        @TempData["Info"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}

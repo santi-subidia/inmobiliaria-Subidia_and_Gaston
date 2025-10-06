@@ -12,11 +12,13 @@ namespace Inmobiliaria.Controllers
     {
         private readonly IPagoRepository _repo;
         private readonly IContratoRepository _contratoRepo;
+        private readonly IUsuarioRepository _usuarioRepo;
 
-        public PagoController(IPagoRepository repo, IContratoRepository contratoRepo)
+        public PagoController(IPagoRepository repo, IContratoRepository contratoRepo, IUsuarioRepository usuarioRepo)
         {
             _repo = repo;
             _contratoRepo = contratoRepo;
+            _usuarioRepo = usuarioRepo;
         }
 
         // GET: Pagos
@@ -67,6 +69,20 @@ namespace Inmobiliaria.Controllers
         {
             var pago = await _repo.GetByIdAsync(id);
             if (pago == null) return NotFound();
+            
+            // Cargar información de usuarios
+            pago.creadoPor = await _usuarioRepo.GetByIdAsync(pago.CreadoPorId);
+            if (pago.AnuladoPorId.HasValue)
+            {
+                pago.anuladoPor = await _usuarioRepo.GetByIdAsync(pago.AnuladoPorId.Value);
+            }
+            
+            // Cargar información del contrato si está disponible
+            if (pago.Contrato == null)
+            {
+                pago.Contrato = await _contratoRepo.GetByIdAsync(pago.ContratoId);
+            }
+            
             return View(pago);
         }
 
