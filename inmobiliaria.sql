@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 04, 2025 at 09:55 PM
+-- Generation Time: Oct 06, 2025 at 08:34 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -38,6 +38,7 @@ CREATE TABLE `contratos` (
   `creado_por` bigint(20) UNSIGNED NOT NULL,
   `creado_at` datetime NOT NULL DEFAULT current_timestamp(),
   `finalizado_por` bigint(20) UNSIGNED DEFAULT NULL,
+  `finalizado_at` datetime DEFAULT NULL,
   `eliminado_por` bigint(20) UNSIGNED DEFAULT NULL,
   `fecha_eliminacion` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -46,29 +47,29 @@ CREATE TABLE `contratos` (
 -- Dumping data for table `contratos`
 --
 
-INSERT INTO `contratos` (`id`, `inmueble_id`, `inquilino_id`, `fecha_inicio`, `fecha_fin_original`, `fecha_fin_efectiva`, `monto_mensual`, `creado_por`, `creado_at`, `finalizado_por`, `eliminado_por`, `fecha_eliminacion`) VALUES
-(12, 14, 25, '2025-10-01', '2027-09-01', NULL, 120000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(13, 15, 26, '2025-11-01', '2027-10-01', NULL, 135000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(14, 16, 27, '2025-12-01', '2027-11-01', NULL, 110000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(15, 17, 28, '2026-01-01', '2027-12-01', NULL, 140000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(16, 18, 29, '2026-02-01', '2028-01-01', NULL, 125000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(17, 19, 30, '2026-03-01', '2028-02-01', '2025-10-02', 150000.00, 1, '2025-09-22 15:35:46', 21, NULL, NULL),
-(18, 20, 31, '2026-04-01', '2028-03-01', NULL, 115000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(19, 21, 32, '2026-05-01', '2028-04-01', '2025-10-02', 160000.00, 1, '2025-09-22 15:35:46', 1, NULL, NULL),
-(20, 22, 33, '2026-06-01', '2028-05-01', '2025-09-23', 130000.00, 1, '2025-09-22 15:35:46', 1, 1, '2025-09-25 18:19:37'),
-(21, 23, 34, '2026-07-01', '2028-06-01', NULL, 145000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL),
-(31, 14, 25, '2021-10-01', '2023-09-01', NULL, 120000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(32, 15, 26, '2021-11-01', '2023-10-01', NULL, 135000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(33, 16, 27, '2021-12-01', '2023-11-01', NULL, 110000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(34, 17, 28, '2022-01-01', '2023-12-01', NULL, 140000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(35, 18, 29, '2022-02-01', '2024-01-01', NULL, 125000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(36, 19, 30, '2022-03-01', '2025-12-23', NULL, 150000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(37, 20, 31, '2022-04-01', '2024-03-01', NULL, 115000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(38, 21, 32, '2022-05-01', '2025-11-13', NULL, 160000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL),
-(39, 22, 27, '2025-09-25', '2026-01-25', '2025-09-24', 700000.00, 1, '2025-09-24 22:32:58', 1, 1, '2025-09-26 02:01:59'),
-(40, 15, 26, '2027-11-11', '2028-11-11', NULL, 148500.00, 1, '2025-09-25 18:23:01', 1, NULL, NULL),
-(41, 23, 26, '2025-09-30', '2026-03-30', NULL, 80000.00, 1, '2025-09-26 18:44:00', NULL, NULL, NULL),
-(42, 20, 25, '2025-10-22', '2026-03-22', NULL, 90000.00, 22, '2025-10-02 11:44:24', NULL, 1, '2025-10-03 23:36:11');
+INSERT INTO `contratos` (`id`, `inmueble_id`, `inquilino_id`, `fecha_inicio`, `fecha_fin_original`, `fecha_fin_efectiva`, `monto_mensual`, `creado_por`, `creado_at`, `finalizado_por`, `finalizado_at`, `eliminado_por`, `fecha_eliminacion`) VALUES
+(12, 14, 25, '2025-10-01', '2027-09-01', NULL, 120000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(13, 15, 26, '2025-11-01', '2027-10-01', NULL, 135000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(14, 16, 27, '2025-12-01', '2027-11-01', NULL, 110000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(15, 17, 28, '2026-01-01', '2027-12-01', NULL, 140000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(16, 18, 29, '2026-02-01', '2028-01-01', NULL, 125000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(17, 19, 30, '2026-03-01', '2028-02-01', '2025-10-02', 150000.00, 1, '2025-09-22 15:35:46', 21, '2025-10-02 15:35:46', NULL, NULL),
+(18, 20, 31, '2026-04-01', '2028-03-01', NULL, 115000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(19, 21, 32, '2026-05-01', '2028-04-01', '2025-10-02', 160000.00, 1, '2025-09-22 15:35:46', 1, '2025-10-02 15:35:46', NULL, NULL),
+(20, 22, 33, '2026-06-01', '2028-05-01', '2025-09-23', 130000.00, 1, '2025-09-22 15:35:46', 1, '2025-09-23 18:19:37', 1, '2025-09-25 18:19:37'),
+(21, 23, 34, '2026-07-01', '2028-06-01', NULL, 145000.00, 1, '2025-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(31, 14, 25, '2021-10-01', '2023-09-01', NULL, 120000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(32, 15, 26, '2021-11-01', '2023-10-01', NULL, 135000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(33, 16, 27, '2021-12-01', '2023-11-01', NULL, 110000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(34, 17, 28, '2022-01-01', '2023-12-01', NULL, 140000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(35, 18, 29, '2022-02-01', '2024-01-01', NULL, 125000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(36, 19, 30, '2022-03-01', '2025-12-23', NULL, 150000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(37, 20, 31, '2022-04-01', '2024-03-01', NULL, 115000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(38, 21, 32, '2022-05-01', '2025-11-13', NULL, 160000.00, 1, '2021-09-22 15:35:46', NULL, NULL, NULL, NULL),
+(39, 22, 27, '2025-09-25', '2026-01-25', '2025-09-24', 700000.00, 1, '2025-09-24 22:32:58', 1, '2025-09-25 23:32:58', 1, '2025-09-26 02:01:59'),
+(40, 15, 26, '2027-11-11', '2028-11-11', NULL, 148500.00, 1, '2025-09-25 18:23:01', 1, NULL, NULL, NULL),
+(41, 23, 26, '2025-09-30', '2026-03-30', NULL, 80000.00, 1, '2025-09-26 18:44:00', NULL, NULL, NULL, NULL),
+(42, 20, 25, '2025-10-22', '2026-03-22', NULL, 90000.00, 22, '2025-10-02 11:44:24', NULL, NULL, 1, '2025-10-03 23:36:11');
 
 -- --------------------------------------------------------
 
@@ -327,7 +328,7 @@ CREATE TABLE `usuarios` (
 INSERT INTO `usuarios` (`id`, `email`, `password_hash`, `nombre`, `apellido`, `telefono`, `avatar_url`, `rol_id`, `is_active`, `created_at`, `updated_at`, `fecha_eliminacion`) VALUES
 (1, 'admin@gmail.com', 'ps0p9TLGtwIktVenb12Gxg==:+3y1LsJGBQwmbqvKG/w2TZlTW7nd92xTNonS5CivjrE=', 'Juan', 'Pérez', '+54 9 11 2345-6789', '/uploads/avatars/avatar_1_638948307589272209.jpeg', 1, 1, '2025-09-18 16:07:01', '2025-10-04 00:51:30', NULL),
 (21, 'admin1@gmail.com', 'G8t3vhHA39smHvr05Gf92A==:zu/n74UxdKXA/a+tcD0UdqBf/PhbWgJ8rwk4VqLMmn8=', 'Maria', 'Veliz', '2664789413', NULL, 1, 1, '2025-09-27 12:45:04', '2025-10-02 17:37:22', NULL),
-(22, 'empleado@gmail.com', 'bnZcwXyZZBCQqHKxfHLDXw==:mfuPO5lo96GE+zpz8RKq2NsF+SJhfWNIfV3gn5UzOIg=', 'Santiago', 'Ramirez', '2664789461', NULL, 2, 1, '2025-09-30 20:28:21', '2025-10-01 11:50:30', NULL),
+(22, 'empleado@gmail.com', 'gReuPl2WSamq4qImLL+zOg==:YCVopDuS1EnL7eIghhYagRMZ1dVpkvUIHvpGli3Ffa4=', 'Santiago', 'Ramirez', '2664789461', NULL, 2, 1, '2025-09-30 20:28:21', '2025-10-06 18:31:27', NULL),
 (23, 'empleado2@gmail.com', 'RgvT7KcL63AahvRiJx889g==:Gp5Unt7hSZSwl9bw5zAggd7UdEKSmFLWqpILvmfdMZg=', 'Patricio', 'Jorgue', '2664789413', NULL, 2, 1, '2025-10-02 20:40:29', '2025-10-02 20:40:29', NULL);
 
 --
@@ -502,7 +503,7 @@ ALTER TABLE `inmuebles`
 --
 ALTER TABLE `pagos`
   ADD CONSTRAINT `fk_pagos_anulado_por` FOREIGN KEY (`anulado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_pagos_contrato` FOREIGN KEY (`contrato_id`) REFERENCES `contratos` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pagos_contrato` FOREIGN KEY (`contrato_id`) REFERENCES `contratos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_pagos_creado_por` FOREIGN KEY (`creado_por`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE;
 
 --
