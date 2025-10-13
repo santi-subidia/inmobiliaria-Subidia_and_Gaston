@@ -28,7 +28,6 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // ==============================
 // Autenticación por Cookies
 // ==============================
-builder.Services.AddScoped<IAuthService, AuthService>(); // ⟵ servicio de hash/claims
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
